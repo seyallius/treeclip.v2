@@ -22,6 +22,9 @@ categories = ["command-line-utilities", "development-tools"]
 rust-version = "1.88.0"
 
 [dependencies]
+anyhow = "1.0.100"
+clap = { version = "4.5.53", features = ["derive", "color", "usage", "help", "error-context", "suggestions", "unicode"] }
+walkdir = "2.5.0"
 
 [profile.release]
 lto = true
