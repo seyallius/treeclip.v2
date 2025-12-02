@@ -1,0 +1,40 @@
+# TreeClip - A CLI tool to traverse project files and extract them into file/clipboard
+#
+# Development Phases:
+# 1. MVP: Directory traversal, clipboard output, editor integration
+# 2. Enhanced: .treeclipignore, starred directories, config support
+# 3. Advanced: History management, search, interactive TUI
+#
+# See README.md for full feature roadmap and implementation details.
+
+[package]
+name = "treeclip"
+version = "0.1.0"
+edition = "2024"
+authors = ["SeyedAli <seyed.ali.devl@gmail.com>"]
+description = "A CLI tool to traverse your project files and extract them into a single file or clipboard"
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/seyedali-dev/treeclip.v2"
+repository = "https://github.com/seyedali-dev/treeclip.v2"
+keywords = ["cli", "clipboard", "file-traversal", "code-extractor", "productivity"]
+categories = ["command-line-utilities", "development-tools"]
+rust-version = "1.88.0"
+
+[dependencies]
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+
+[profile.dev]
+opt-level = 1  # Faster compile times while developing
+
+[profile.test]
+opt-level = 1
+
+[[bin]]
+name = "treeclip"
+path = "src/main.rs"
+doc = false
