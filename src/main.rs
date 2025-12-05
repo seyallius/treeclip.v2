@@ -1,4 +1,4 @@
-use crate::commands::run::run::run;
+use crate::commands::run::*;
 use clap::Parser;
 
 mod commands;
@@ -20,13 +20,13 @@ struct Cli {
 enum Commands {
     /// Run treeclip on a directory
     #[command(arg_required_else_help = true)]
-    Run(commands::run::RunArgs),
+    Run(args::RunArgs),
 }
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     match cli.command {
-        Commands::Run(run_args) => run(run_args)?,
+        Commands::Run(run_args) => run::run(run_args)?,
     }
 
     Ok(())

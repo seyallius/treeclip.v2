@@ -1,9 +1,9 @@
-use crate::commands::run::RunArgs;
+use crate::commands::run::args;
 use std::env;
 use std::path::PathBuf;
 use walkdir::WalkDir;
 
-pub fn run(run_args: RunArgs) -> anyhow::Result<()> {
+pub fn run(run_args: args::RunArgs) -> anyhow::Result<()> {
     if run_args.verbose {
         println!("🚀 Starting TreeClip...");
         println!("📁 Input Path: {}", run_args.output_path);
@@ -38,9 +38,9 @@ pub fn run(run_args: RunArgs) -> anyhow::Result<()> {
 
 fn run_treeclip(
     path: &str,
-    exclude_paths: &[String],
-    output_path: &str,
-    verbose: bool,
+    _exclude_paths: &[String],
+    _output_path: &str,
+    _verbose: bool,
 ) -> anyhow::Result<()> {
     let path_buf = PathBuf::from(path);
 
