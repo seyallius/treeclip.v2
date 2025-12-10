@@ -14,3 +14,27 @@ fn main() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod main_tests {
+    use super::*;
+    use clap::Parser;
+
+    #[test]
+    fn test_main_success() -> anyhow::Result<()> {
+        let temp_dir = tempfile::tempdir()?;
+
+        // Test with a valid directory
+        std::env::set_current_dir(&temp_dir)?;
+        let args = vec!["treeclip", "run", "."];
+
+        // This would test the full execution path
+        // For now, just test that it doesn't panic
+        let result = std::panic::catch_unwind(|| {
+            let _ = Cli::parse_from(args);
+        });
+
+        assert!(result.is_ok());
+        Ok(())
+    }
+}

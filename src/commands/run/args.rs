@@ -47,3 +47,43 @@ fn validate_path(s: &str) -> Result<PathBuf, String> {
     }
     Ok(path)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cli::{Cli, Commands};
+
+    #[test]
+    fn test_validate_path_valid() {
+        let result = validate_path(".");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), PathBuf::from("."));
+    }
+
+    #[test]
+    fn test_validate_path_empty() {
+        let result = validate_path("");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("cannot be empty"));
+    }
+
+    #[test]
+    fn test_run_args_default_values() {
+        use clap::Parser;
+
+        let cli = Cli::parse_from(&["treeclip", "run"]);
+        match cli.command {
+            Commands::Run(args) => {
+                assert_eq!(args.input_path, PathBuf::from("."));
+                assert!(args.output_path.is_some());
+                assert!(args.clipboard);
+                assert!(!args.stats);
+                assert!(!args.editor);
+                assert!(!args.delete);
+                assert!(!args.verbose);
+                assert!(args.skip_hidden);
+                assert!(args.exclude.is_empty());
+            }
+        }
+    }
+}
