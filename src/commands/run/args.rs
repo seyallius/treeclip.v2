@@ -37,6 +37,12 @@ pub struct RunArgs {
     /// Skip hidden files and folders in Unix systems
     #[arg(short, long, default_value_t = true)]
     pub skip_hidden: bool,
+
+    /// Indicates whether to extract raw content or with additional metadata
+    /// such as path of each file, file structure (tree), markdown formatted
+    /// if code, etc.
+    #[arg(short, long, default_value_t = true)]
+    pub raw: bool,
 }
 
 fn validate_path(s: &str) -> Result<PathBuf, String> {
