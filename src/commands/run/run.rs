@@ -1,6 +1,7 @@
 use super::args::RunArgs;
-use crate::core::traversal;
+use crate::core::traversal::walker;
 use std::path;
+use std::path::PathBuf;
 
 pub fn execute(args: RunArgs) -> anyhow::Result<()> {
     if args.verbose {
@@ -8,7 +9,10 @@ pub fn execute(args: RunArgs) -> anyhow::Result<()> {
     }
 
     // Run core logic
-    traversal::walker::process_dir(&args)?;
+    let default_path = PathBuf::from(".");
+    let output = args.output_path.as_ref().unwrap_or(&default_path);
+    let walker = walker::Walker::new(&args.input_path, &output, &args.exclude);
+    walker.process_dir(&args)?;
 
     if args.clipboard {
         // Will implement later
