@@ -10,6 +10,10 @@ pub struct RunArgs {
     #[arg(default_value = ".", value_parser = validate_path)]
     pub output_path: Option<PathBuf>,
 
+    /// Current working directory (for treeclipignore and stuff)
+    #[arg(long, default_value = ".", value_parser = validate_path)]
+    pub root: Option<PathBuf>,
+
     /// Exclude files/folders matching these patterns
     #[arg(short, long)]
     pub exclude: Vec<String>,

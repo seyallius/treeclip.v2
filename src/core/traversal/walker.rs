@@ -1,4 +1,5 @@
 use crate::commands::run::args::RunArgs;
+use crate::core::exclude::exclude;
 use crate::core::traversal::filter;
 use crate::core::utils;
 use anyhow::Context;
@@ -10,14 +11,21 @@ use walkdir::WalkDir;
 
 pub struct Walker {
     root: PathBuf,
+    input: PathBuf,
     output: PathBuf,
     exclude_patterns: Vec<String>,
 }
 
 impl Walker {
-    pub fn new(root: &PathBuf, output: &PathBuf, exclude_patterns: &Vec<String>) -> Self {
+    pub fn new(
+        root: &PathBuf,
+        input: &PathBuf,
+        output: &PathBuf,
+        exclude_patterns: &Vec<String>,
+    ) -> Self {
         Self {
             root: root.clone(),
+            input: input.clone(),
             output: output.clone(),
             exclude_patterns: exclude_patterns.clone(),
         }
@@ -34,10 +42,12 @@ impl Walker {
     }
 
     fn traverse(&self, skip_hidden: bool, verbose: bool) -> anyhow::Result<()> {
-        let walker = WalkDir::new(&self.root).into_iter().filter_entry(|entry| {
-            let non_excluded_path = !filter::should_exclude(entry.path(), &self.exclude_patterns);
+        let matcher = exclude::ExcludeMatcher::new(&self.root, &self.exclude_patterns)?;
+        let walker = WalkDir::new(&self.input).into_iter().filter_entry(|entry| {
+            let excluded = matcher.is_excluded(entry.path());
             let non_hidden_path = !skip_hidden || !filter::is_hidden(entry);
-            non_excluded_path && non_hidden_path
+
+            !excluded && non_hidden_path
         });
 
         let mut file = File::options()
@@ -111,7 +121,7 @@ mod walker_tests {
         path.set_extension("txt");
         assert_eq!(temp_dir.path(), path.parent().unwrap());
 
-        let walker = Walker::new(&temp_dir.path().to_path_buf(), &path, &vec![]);
+        let walker = Walker::new(&path, &temp_dir.path().to_path_buf(), &path, &vec![]);
         let result = walker.traverse(false, false);
         assert!(result.is_ok());
     }
@@ -132,7 +142,12 @@ mod walker_tests {
         let output_path = temp_dir.path().join("output.txt");
 
         // Run traversal
-        let walker = Walker::new(&temp_dir.path().to_path_buf(), &output_path, &vec![]);
+        let walker = Walker::new(
+            &temp_dir.path().to_path_buf(),
+            &temp_dir.path().to_path_buf(),
+            &output_path,
+            &vec![],
+        );
         walker.traverse(false, false)?;
 
         // Read and verify output

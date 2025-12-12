@@ -1,20 +1,33 @@
 use super::args::RunArgs;
 use crate::core::traversal::walker;
-use std::path;
 use std::path::{Path, PathBuf};
+use std::{env, io, path};
 
 pub fn execute(args: RunArgs) -> anyhow::Result<()> {
     if args.verbose {
         log_startup(&args);
     }
 
-    // Run core logic
+    let input = if &args.input_path == Path::new(".") {
+        env::current_dir()?
+    } else {
+        args.input_path.clone()
+    };
+
     let output = match &args.output_path {
         Some(path) if path == Path::new(".") => PathBuf::from("./treeclip_temp.txt"),
         Some(path) => path.clone(),
         None => PathBuf::from("./treeclip_temp.txt"),
     };
-    let walker = walker::Walker::new(&args.input_path, &output, &args.exclude);
+
+    let root: io::Result<PathBuf> = match &args.root {
+        Some(path) if path == Path::new(".") => env::current_dir(),
+        Some(path) => Ok(path.to_path_buf()),
+        None => env::current_dir(),
+    };
+
+    // Run core logic
+    let walker = walker::Walker::new(&root?, &input, &output, &args.exclude);
     walker.process_dir(&args)?;
 
     if args.clipboard {
