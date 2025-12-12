@@ -71,8 +71,10 @@ impl Walker {
                     .context("failed to write path header")?;
 
                 // Read and write content
-                let content = fs::read_to_string(entry_path)
-                    .context(format!("reading file {} failed", entry_path.display()))?;
+                let content = fs::read_to_string(entry_path) //TODO: switch to buffered streaming (BufReader::read_line or copy) later — but only if you want extra polish.
+                    .with_context(|| {
+                        format!("failed writing content for {}", entry_path.display())
+                    })?;
                 file.write_all(content.trim_end().as_bytes())
                     .context("failed to write content to file")?;
 
