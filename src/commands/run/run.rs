@@ -1,8 +1,9 @@
 use super::args::RunArgs;
 use crate::core::clipboard::clipboard;
 use crate::core::traversal::walker;
+use crate::core::utils;
 use std::path::{Path, PathBuf};
-use std::{env, io, path};
+use std::{env, fs, io, path};
 
 pub fn execute(args: RunArgs) -> anyhow::Result<()> {
     if args.verbose {
@@ -31,8 +32,22 @@ pub fn execute(args: RunArgs) -> anyhow::Result<()> {
     let walker = walker::Walker::new(&root?, &input, &output, &args.exclude);
     walker.process_dir(&args)?;
 
+    let mut clip = clipboard::Clipboard::new(&output)?;
     if args.clipboard {
-        clipboard::Clipboard::new(&output).set_clipboard()?;
+        clip.set_clipboard()?;
+    }
+
+    if args.stats {
+        let content = fs::read_to_string(&output)?; // fixme: bad. very bad. cpu and ram intensive!
+        let lines = content.split("\n").count();
+        let chars = content.len();
+        let words = content.split_whitespace().count();
+
+        println!("📊  Clipboard content stats:");
+        println!("   📝  Characters: {}", utils::format_number(chars as i64));
+        println!("   📄  Lines: {}", utils::format_number(lines as i64));
+        println!("   💬  Words: {}", utils::format_number(words as i64));
+        println!("   💾  Size: {}", utils::format_number(chars as i64));
     }
 
     if args.editor {

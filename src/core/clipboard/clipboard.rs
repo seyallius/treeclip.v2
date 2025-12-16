@@ -8,11 +8,17 @@ use std::time::Duration;
 pub struct Clipboard {
     /// data to put onto clipboard
     data: PathBuf,
+
+    clip: arboard::Clipboard,
 }
 
 impl Clipboard {
-    pub fn new(data: &PathBuf) -> Self {
-        Self { data: data.clone() }
+    pub fn new(data: &PathBuf) -> anyhow::Result<Self> {
+        Ok(Self {
+            data: data.clone(),
+            clip: arboard::Clipboard::new()
+                .with_context(|| "failed to create clipboard instance")?,
+        })
     }
 }
 
@@ -34,7 +40,7 @@ impl Clipboard {
     ///
     /// Returns an error if the file cannot be read or if the clipboard cannot be
     /// accessed.
-    pub fn set_clipboard(self) -> anyhow::Result<()> {
+    pub fn set_clipboard(&mut self) -> anyhow::Result<()> {
         // Read the entire file into memory.
         // Clipboard APIs require owning the full contents as a string.
         let mut output_file = File::options().read(true).open(&self.data)?;
@@ -43,8 +49,7 @@ impl Clipboard {
 
         // Create a clipboard handle and set the text.
         // On Linux, clipboard managers usually take ownership immediately.
-        let mut clipboard = arboard::Clipboard::new()?;
-        clipboard
+        self.clip
             .set()
             .text(output_content)
             .with_context(|| "failed to set output content in clipboard")?;
