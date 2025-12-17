@@ -1,10 +1,10 @@
-pub fn is_hidden(entry: &walkdir::DirEntry) -> bool {
+pub fn is_hidden(entry: &walkdir::DirEntry, verbose: bool) -> bool {
     entry
         .file_name()
         .to_str()
         .map(|str| {
             let hidden_entry = str.starts_with(".");
-            if hidden_entry {
+            if hidden_entry && verbose {
                 println!("Hidden entry '{}' was skipped", entry.path().display());
             }
             hidden_entry
@@ -31,6 +31,6 @@ mod filter_tests {
             .unwrap()
             .unwrap();
 
-        assert!(is_hidden(&entry));
+        assert!(is_hidden(&entry, false));
     }
 }

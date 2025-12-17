@@ -1,7 +1,7 @@
 use super::args::RunArgs;
 use crate::core::{clipboard::clipboard, editor::editor, traversal::walker, utils};
 use std::path::{Path, PathBuf};
-use std::{env, fs, io, path};
+use std::{env, fs, path};
 
 pub fn execute(args: RunArgs) -> anyhow::Result<()> {
     if args.verbose {
@@ -20,14 +20,14 @@ pub fn execute(args: RunArgs) -> anyhow::Result<()> {
         None => PathBuf::from("./treeclip_temp.txt"),
     };
 
-    let root: io::Result<PathBuf> = match &args.root {
-        Some(path) if path == Path::new(".") => env::current_dir(),
-        Some(path) => Ok(path.to_path_buf()),
-        None => env::current_dir(),
+    let root = match &args.root {
+        Some(path) if path == Path::new(".") => env::current_dir()?,
+        Some(path) => path.to_path_buf(),
+        None => env::current_dir()?,
     };
 
     // Run core logic
-    let walker = walker::Walker::new(&root?, &input, &output, &args.exclude);
+    let walker = walker::Walker::new(&root, &input, &output, &args.exclude);
     walker.process_dir(&args)?;
 
     let mut clip = clipboard::Clipboard::new(&output)?;
@@ -38,14 +38,15 @@ pub fn execute(args: RunArgs) -> anyhow::Result<()> {
     if args.stats {
         let content = fs::read_to_string(&output)?; // fixme: bad. very bad. cpu and ram intensive!
         let lines = content.split("\n").count();
-        let chars = content.len();
+        let chars = content.chars().count();
         let words = content.split_whitespace().count();
+        let bytes = content.len();
 
         println!("📊  Clipboard content stats:");
         println!("   📝  Characters: {}", utils::format_number(chars as i64));
-        println!("   📄  Lines: {}", utils::format_number(lines as i64));
-        println!("   💬  Words: {}", utils::format_number(words as i64));
-        println!("   💾  Size: {}", utils::format_number(chars as i64));
+        println!("   📄  Lines     : {}", utils::format_number(lines as i64));
+        println!("   💬  Words     : {}", utils::format_number(words as i64));
+        println!("   💾  Size      : {}", utils::format_bytes(bytes));
     }
 
     if args.editor {

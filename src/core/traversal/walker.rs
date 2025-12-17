@@ -45,7 +45,7 @@ impl Walker {
         let matcher = exclude::ExcludeMatcher::new(&self.root, &self.exclude_patterns)?;
         let walker = WalkDir::new(&self.input).into_iter().filter_entry(|entry| {
             let excluded = matcher.is_excluded(entry.path());
-            let non_hidden_path = !skip_hidden || !filter::is_hidden(entry);
+            let non_hidden_path = !skip_hidden || !filter::is_hidden(entry, verbose);
 
             !excluded && non_hidden_path
         });

@@ -25,6 +25,28 @@ pub fn format_number(n: i64) -> String {
     result
 }
 
+/// Convert bytes to human-readable format (B, KB, MB, GB)
+pub fn format_bytes(bytes: usize) -> String {
+    const UNITS: [&str; 6] = ["B", "KB", "MB", "GB", "TB", "PB"];
+
+    if bytes == 0 {
+        return "0 B".to_string();
+    }
+
+    let base: f64 = 1024.0;
+    let bytes_f64 = bytes as f64;
+    let exponent = (bytes_f64.ln() / base.ln()).floor() as usize;
+    let exponent = exponent.min(UNITS.len() - 1);
+
+    let value = bytes_f64 / base.powi(exponent as i32);
+
+    if exponent == 0 {
+        format!("{} {}", bytes, UNITS[exponent])
+    } else {
+        format!("{:.1} {}", value, UNITS[exponent])
+    }
+}
+
 #[cfg(test)]
 mod utils_tests {
     use crate::core::utils::validate_path_exists;
