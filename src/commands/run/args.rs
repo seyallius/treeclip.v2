@@ -7,7 +7,7 @@ pub struct RunArgs {
     pub input_path: PathBuf,
 
     /// Output path for extracted file
-    #[arg(default_value = ".", value_parser = validate_path)]
+    #[arg(short, long, default_value = ".", value_parser = validate_path)]
     pub output_path: Option<PathBuf>,
 
     /// Current working directory (for treeclipignore and stuff)
