@@ -7,6 +7,9 @@ mod commands;
 mod core;
 
 fn main() -> anyhow::Result<()> {
+    // Small delay for dramatic effect
+    std::thread::sleep(std::time::Duration::from_millis(100));
+
     let cli = Cli::parse();
     match cli.command {
         Commands::Run(run_args) => run::execute(run_args)?,

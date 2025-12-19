@@ -3,9 +3,10 @@ use crate::core::exclude::exclude;
 use crate::core::traversal::filter;
 use crate::core::utils;
 use anyhow::Context;
+use colored::Colorize;
 use std::fs;
 use std::fs::File;
-use std::io::Write;
+use std::io::{stdout, Write};
 use std::path::PathBuf;
 use walkdir::WalkDir;
 
@@ -36,7 +37,14 @@ impl Walker {
     pub fn process_dir(&self, run_args: &RunArgs) -> anyhow::Result<()> {
         utils::validate_path_exists(&run_args.input_path)?;
         self.traverse(run_args.skip_hidden, run_args.verbose)?;
-        println!("{} {:<20}", "✅", " Extraction complete");
+
+        if run_args.verbose {
+            println!(
+                "\n{} {}",
+                "🎊".green(),
+                "Extraction complete! All files gathered~".bright_green()
+            );
+        }
         Ok(())
     }
 
@@ -54,7 +62,12 @@ impl Walker {
             .truncate(true)
             .create(true)
             .open(&self.output)?;
+
+        let mut file_count = 0;
         let mut first = true;
+
+        let tree_emojis = vec!["🌱", "🌿", "🍃", "🌳", "🌲", "🎄"];
+
         for entry in walker.filter_map(|e| e.ok()) {
             let entry_path = entry.path();
 
@@ -64,9 +77,12 @@ impl Walker {
             }
 
             if entry_path.is_file() {
-                if verbose {
-                    // TODO: do some verbose thingy
-                    println!("📄 {}", entry_path.display());
+                file_count += 1;
+
+                if verbose && file_count % 5 == 0 {
+                    let emoji = tree_emojis[(file_count / 5) % tree_emojis.len()];
+                    print!("\r{} Collected {} files so far...", emoji, file_count);
+                    stdout().flush()?;
                 }
 
                 let relative_path = entry_path.strip_prefix(&self.root).unwrap_or(entry_path);
@@ -80,10 +96,10 @@ impl Walker {
                     .context("failed to write path header")?;
 
                 // Read and write content
-                let content = fs::read_to_string(entry_path) //TODO: switch to buffered streaming (BufReader::read_line or copy) later — but only if you want extra polish.
-                    .with_context(|| {
-                        format!("failed writing content for {}", entry_path.display())
-                    })?;
+                let content = fs::read_to_string(entry_path).with_context(|| {
+                    //TODO: switch to buffered streaming (BufReader::read_line or copy) later — but only if you want extra polish.
+                    format!("failed writing content for {}", entry_path.display())
+                })?;
                 file.write_all(content.trim_end().as_bytes())
                     .context("failed to write content to file")?;
 
@@ -92,6 +108,16 @@ impl Walker {
                 first = false;
             }
         }
+
+        if verbose {
+            println!(
+                "\r{} Collected {} files total! {}",
+                "✨".green(),
+                file_count,
+                "Nice work!".bright_green()
+            );
+        }
+
         Ok(())
     }
 }

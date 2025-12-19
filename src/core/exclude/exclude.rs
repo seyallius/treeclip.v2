@@ -17,17 +17,22 @@ impl ExcludeMatcher {
         if ignore_file.exists() {
             println!(
                 "{} {:<width$} {}",
-                "🚫",
-                " Exclude file (.treeclipignore) found at".bold(),
-                ignore_file.display().to_string().cyan(),
+                "🔍".cyan(),
+                "Found ignore file:".bold(),
+                ignore_file.display().to_string().bright_cyan(),
                 width = constants::RIGHT_PADDING,
             );
+            println!("   {} Applying rules from .treeclipignore", "📝".dimmed());
             builder.add(ignore_file);
         }
 
         // 2. CLI patterns
-        for pat in cli_patterns {
-            builder.add_line(None, pat)?;
+        if !cli_patterns.is_empty() {
+            println!("   {} Adding CLI exclude patterns", "⚡".yellow());
+            for pat in cli_patterns {
+                builder.add_line(None, pat)?;
+                println!("      {} {}", "🚫".red(), pat.dimmed());
+            }
         }
 
         let inner = builder.build()?;
