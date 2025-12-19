@@ -103,8 +103,4 @@ impl Messages {
             .dimmed()
             .to_string()
     }
-
-    pub fn adding_cli_patterns() -> String {
-        "  ⚡ Adding CLI exclude patterns".yellow().to_string()
-    }
 }

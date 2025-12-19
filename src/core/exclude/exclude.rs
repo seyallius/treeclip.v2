@@ -24,7 +24,6 @@ impl ExcludeMatcher {
 
         // 2. CLI patterns
         if !cli_patterns.is_empty() {
-            println!("{}", Messages::adding_cli_patterns());
             for pat in cli_patterns {
                 builder.add_line(None, pat)?;
             }
