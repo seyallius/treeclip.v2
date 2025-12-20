@@ -1,18 +1,53 @@
+//! exclude - Handles file and directory exclusion patterns using gitignore-style rules.
+
 use crate::core::ui::messages::Messages;
 use ignore::gitignore::{Gitignore, GitignoreBuilder};
 use std::path::Path;
 
+/// ExcludeMatcher determines whether paths should be excluded from traversal.
 pub struct ExcludeMatcher {
     inner: Gitignore,
 }
 
 impl ExcludeMatcher {
+    /// Creates a new ExcludeMatcher with patterns from .treeclipignore and CLI arguments.
+    ///
+    /// # Arguments
+    ///
+    /// * `root` - Root directory to search for .treeclipignore file
+    /// * `cli_patterns` - Additional exclusion patterns from command-line arguments
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the gitignore builder fails to compile patterns.
     pub fn new(root: &Path, cli_patterns: &[String]) -> anyhow::Result<Self> {
         let mut builder = GitignoreBuilder::new(root);
 
-        // 1. .treeclipignore file (optional)
+        // Add .treeclipignore file patterns (if exists)
+        Self::add_ignore_file(&mut builder, root);
+
+        // Add CLI patterns
+        Self::add_cli_patterns(&mut builder, cli_patterns)?;
+
+        let inner = builder.build()?;
+        Ok(Self { inner })
+    }
+
+    /// Checks if a path should be excluded based on configured patterns.
+    pub fn is_excluded(&self, path: &Path) -> bool {
+        self.inner.matched(path, path.is_dir()).is_ignore()
+    }
+}
+
+// -------------------------------------------- Private Helper Functions --------------------------------------------
+
+impl ExcludeMatcher {
+    /// Adds patterns from .treeclipignore file if it exists.
+    fn add_ignore_file(builder: &mut GitignoreBuilder, root: &Path) {
         let ignore_file = root.join(".treeclipignore");
-        //TODO: path is said to be concurrent non-safe = [https://doc.rust-lang.org/stable/std/fs/index.html#:~:text=For%20example%2C%20checking%20if%20a%20file%20exists%20and%20then%20creating%20it%20if%20it%20doesn%E2%80%99t%20is%20vulnerable%20to%20TOCTOU%20%2D%20another%20process%20could%20create%20the%20file%20between%20your%20check%20and%20creation%20attempt]
+
+        // TODO: Path operations are not concurrent-safe - consider locking or TOCTOU handling
+        // See: https://doc.rust-lang.org/stable/std/fs/index.html (TOCTOU section)
         if ignore_file.exists() {
             println!(
                 "{}",
@@ -21,22 +56,17 @@ impl ExcludeMatcher {
             println!("{}", Messages::applying_ignore_rules());
             builder.add(ignore_file);
         }
-
-        // 2. CLI patterns
-        if !cli_patterns.is_empty() {
-            for pat in cli_patterns {
-                builder.add_line(None, pat)?;
-            }
-        }
-
-        let inner = builder.build()?;
-        Ok(Self { inner })
     }
-}
 
-impl ExcludeMatcher {
-    pub fn is_excluded(&self, path: &Path) -> bool {
-        self.inner.matched(path, path.is_dir()).is_ignore()
+    /// Adds CLI-provided exclusion patterns to the builder.
+    fn add_cli_patterns(
+        builder: &mut GitignoreBuilder,
+        cli_patterns: &[String],
+    ) -> anyhow::Result<()> {
+        for pat in cli_patterns {
+            builder.add_line(None, pat)?;
+        }
+        Ok(())
     }
 }
 
@@ -47,35 +77,98 @@ mod exclude_tests {
     use tempfile::TempDir;
 
     #[test]
-    fn test_is_excluded() -> anyhow::Result<()> {
+    fn test_exclude_matcher_creation() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
+        let matcher = ExcludeMatcher::new(temp_dir.path(), &[])?;
+
+        // Should not exclude root
+        assert!(!matcher.is_excluded(temp_dir.path()));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_is_excluded_with_ignore_file() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
+        let root = temp_dir.path();
+
+        // Create node_modules directory
+        let node_modules = root.join("node_modules");
+        fs::create_dir(&node_modules)?;
+
+        // Create .treeclipignore with exclusion pattern
+        let ignore_file = root.join(".treeclipignore");
+        fs::write(&ignore_file, "node_modules")?;
+
+        // Create regular files
+        let temp1 = root.join("temp1.txt");
+        fs::write(&temp1, "temp1")?;
+
+        let temp2 = root.join("temp2.txt");
+        fs::write(&temp2, "temp2")?;
+
+        let matcher = ExcludeMatcher::new(root, &[])?;
+
+        // Regular files should not be excluded
+        assert!(!matcher.is_excluded(root));
+        assert!(!matcher.is_excluded(&temp1));
+        assert!(!matcher.is_excluded(&temp2));
+
+        // node_modules should be excluded
+        assert!(matcher.is_excluded(&node_modules));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_is_excluded_with_cli_patterns() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
+        let root = temp_dir.path();
+
+        let target = root.join("target");
+        fs::create_dir(&target)?;
+
+        let src = root.join("src");
+        fs::create_dir(&src)?;
+
+        let matcher = ExcludeMatcher::new(root, &["target".to_string()])?;
+
+        // src should not be excluded
+        assert!(!matcher.is_excluded(&src));
+
+        // target should be excluded (CLI pattern)
+        assert!(matcher.is_excluded(&target));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_is_excluded_with_multiple_patterns() -> anyhow::Result<()> {
         let temp_dir = TempDir::new()?;
         let root = temp_dir.path();
 
         let node_modules = root.join("node_modules");
         fs::create_dir(&node_modules)?;
 
+        let target = root.join("target");
+        fs::create_dir(&target)?;
+
+        let src = root.join("src");
+        fs::create_dir(&src)?;
+
+        // Create ignore file with one pattern
         let ignore_file = root.join(".treeclipignore");
-        fs::write(&ignore_file, "node_modules")?; // should be excluded
+        fs::write(&ignore_file, "node_modules")?;
 
-        let temp1 = root.join("temp1");
-        fs::write(&temp1, "temp1")?;
+        // Add another pattern via CLI
+        let matcher = ExcludeMatcher::new(root, &["target".to_string()])?;
 
-        let temp2 = root.join("temp2");
-        fs::write(&temp2, "temp2")?;
+        // src should not be excluded
+        assert!(!matcher.is_excluded(&src));
 
-        let matcher = ExcludeMatcher::new(root, &[])?;
-
-        let is_not_excluded = !matcher.is_excluded(root);
-        assert!(is_not_excluded);
-
-        let is_not_excluded = !matcher.is_excluded(&temp1);
-        assert!(is_not_excluded);
-
-        let is_not_excluded = !matcher.is_excluded(&temp2);
-        assert!(is_not_excluded);
-
-        let is_excluded = matcher.is_excluded(&node_modules);
-        assert!(is_excluded); // should be excluded
+        // Both node_modules and target should be excluded
+        assert!(matcher.is_excluded(&node_modules));
+        assert!(matcher.is_excluded(&target));
 
         Ok(())
     }

@@ -1,3 +1,5 @@
+//! main - Entry point for the TreeClip CLI application.
+
 use crate::commands::run;
 use clap::Parser;
 use cli::*;
@@ -7,7 +9,7 @@ mod commands;
 mod core;
 
 fn main() -> anyhow::Result<()> {
-    // Small delay for dramatic effect
+    // NOTE: Small delay for dramatic effect - consider removing in production
     std::thread::sleep(std::time::Duration::from_millis(100));
 
     let cli = Cli::parse();
@@ -24,15 +26,11 @@ mod main_tests {
     use clap::Parser;
 
     #[test]
-    fn test_main_success() -> anyhow::Result<()> {
+    fn test_cli_parsing_does_not_panic() -> anyhow::Result<()> {
         let temp_dir = tempfile::tempdir()?;
-
-        // Test with a valid directory
         std::env::set_current_dir(&temp_dir)?;
-        let args = vec!["treeclip", "run", "."];
 
-        // This would test the full execution path
-        // For now, just test that it doesn't panic
+        let args = vec!["treeclip", "run", "."];
         let result = std::panic::catch_unwind(|| {
             let _ = Cli::parse_from(args);
         });

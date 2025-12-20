@@ -1,9 +1,13 @@
+//! banner - Provides welcome and goodbye banner displays for the application.
+
 use crate::core::ui::table::{Align, BorderStyle, FormattedBox};
 use colored::Colorize;
 use rand::Rng;
 use std::sync::LazyLock;
-use std::vec;
 
+// -------------------------------------------- Constants --------------------------------------------
+
+/// Available banner designs for welcome screen.
 pub static BANNERS: LazyLock<Vec<String>> = LazyLock::new(|| {
     vec![
         FormattedBox::new("🌳  T R E E C L I P  🌳")
@@ -33,12 +37,7 @@ pub static BANNERS: LazyLock<Vec<String>> = LazyLock::new(|| {
     ]
 });
 
-pub fn print_welcome() {
-    let mut rng = rand::rng();
-    let banner = &BANNERS[rng.random_range(0..BANNERS.len())];
-    println!("{}", banner.bright_magenta());
-}
-
+/// Goodbye messages to display on exit.
 const GOODBYE_MESSAGES: &[&str] = &[
     "✨ Mission accomplished! Time to shine!",
     "🎯 All done! Maybe grab a cookie? 🍪",
@@ -50,21 +49,7 @@ const GOODBYE_MESSAGES: &[&str] = &[
     "🎊 Fantastic! Another tree successfully clipped!",
 ];
 
-pub fn print_goodbye() {
-    println!("\n{}", "━".repeat(55).bright_cyan());
-
-    let mut rng = rand::rng();
-    let message = GOODBYE_MESSAGES[rng.random_range(0..GOODBYE_MESSAGES.len())];
-
-    println!("    {}", message.bright_green().bold());
-    println!(
-        "    {} {}",
-        get_random_kaomoji(),
-        "Have a wonderful day!".bright_yellow()
-    );
-    println!("{}\n", "━".repeat(55).bright_cyan());
-}
-
+/// Collection of kaomojis for various messages.
 const KAOMOJIS: &[&str] = &[
     "ʕ•ᴥ•ʔ",
     "(◕‿◕✿)",
@@ -88,75 +73,76 @@ const KAOMOJIS: &[&str] = &[
     "(ﾉ^ヮ^)ﾉ*:・ﾟ✧",
 ];
 
+/// Displays a randomly selected welcome banner.
+pub fn print_welcome() {
+    let mut rng = rand::rng();
+    let banner = &BANNERS[rng.random_range(0..BANNERS.len())];
+    println!("{}", banner.bright_magenta());
+}
+
+/// Displays a goodbye message with a random kaomoji.
+pub fn print_goodbye() {
+    println!("\n{}", "━".repeat(55).bright_cyan());
+
+    let mut rng = rand::rng();
+    let message = GOODBYE_MESSAGES[rng.random_range(0..GOODBYE_MESSAGES.len())];
+
+    println!("    {}", message.bright_green().bold());
+    println!(
+        "    {} {}",
+        get_random_kaomoji(),
+        "Have a wonderful day!".bright_yellow()
+    );
+    println!("{}\n", "━".repeat(55).bright_cyan());
+}
+
+/// Returns a random kaomoji from the collection.
 pub fn get_random_kaomoji() -> &'static str {
     let mut rng = rand::rng();
     KAOMOJIS[rng.random_range(0..KAOMOJIS.len())]
 }
 
 #[cfg(test)]
-mod banner_test {
-    use crate::core::utils;
-    use unicode_width::UnicodeWidthStr;
+mod banner_tests {
+    use super::*;
 
     #[test]
-    fn test() {
-        // expected output:
-        // ┌─────────────────────────────────────────────────┐
-        // │                Content Statistics               │
-        // ├─────────────────────────────────────────────────┤
-        // │  📝 Characters:                               1 │
-        // │  📄 Lines:                                  100 │
-        // │  💬 Words:                                1,000 │
-        // │  💾 Size:                              976.6 KB │
-        // └─────────────────────────────────────────────────┘
-        assert_eq!(
-            render_stats(1, 100, 1000, 1_000_000),
-            "┌─────────────────────────────────────────────────┐
-│                Content Statistics               │
-├─────────────────────────────────────────────────┤
-│  📝 Characters:                              1  │
-│  📄 Lines:                                 100  │
-│  💬 Words:                               1,000  │
-│  💾 Size:                             976.6 KB  │
-└─────────────────────────────────────────────────┘"
-        );
+    fn test_banners_not_empty() {
+        assert!(!BANNERS.is_empty());
+        assert_eq!(BANNERS.len(), 3);
     }
 
-    fn render_stats(chars: i64, lines: i64, words: i64, bytes: u64) -> String {
-        let label_width = 18;
-        let value_width = 25;
-
-        let rows = vec![
-            ("📝 Characters:", utils::format_number(chars)),
-            ("📄 Lines:", utils::format_number(lines)),
-            ("💬 Words:", utils::format_number(words)),
-            ("💾 Size:", utils::format_bytes(bytes as usize)),
-        ];
-
-        let mut out = String::new();
-        out.push_str("┌─────────────────────────────────────────────────┐\n");
-        out.push_str("│                Content Statistics               │\n");
-        out.push_str("├─────────────────────────────────────────────────┤\n");
-
-        for (label, value) in rows {
-            out.push_str(&format!(
-                "│  {}  {}  │\n",
-                pad(label, label_width),
-                pad_right_align(&value, value_width)
-            ));
+    #[test]
+    fn test_each_banner_contains_treeclip() {
+        for banner in BANNERS.iter() {
+            assert!(banner.contains("T R E E C L I P"));
         }
-
-        out.push_str("└─────────────────────────────────────────────────┘");
-        out
     }
 
-    fn pad(s: &str, width: usize) -> String {
-        let w = UnicodeWidthStr::width(s);
-        format!("{}{}", s, " ".repeat(width.saturating_sub(w)))
+    #[test]
+    fn test_goodbye_messages_not_empty() {
+        assert!(!GOODBYE_MESSAGES.is_empty());
+        assert_eq!(GOODBYE_MESSAGES.len(), 8);
     }
 
-    fn pad_right_align(s: &str, width: usize) -> String {
-        let w = UnicodeWidthStr::width(s);
-        format!("{}{}", " ".repeat(width.saturating_sub(w)), s)
+    #[test]
+    fn test_kaomojis_not_empty() {
+        assert!(!KAOMOJIS.is_empty());
+        assert_eq!(KAOMOJIS.len(), 20);
+    }
+
+    #[test]
+    fn test_get_random_kaomoji_returns_valid() {
+        let kaomoji = get_random_kaomoji();
+        assert!(KAOMOJIS.contains(&kaomoji));
+    }
+
+    #[test]
+    fn test_get_random_kaomoji_multiple_calls() {
+        // Test that function can be called multiple times
+        for _ in 0..10 {
+            let kaomoji = get_random_kaomoji();
+            assert!(KAOMOJIS.contains(&kaomoji));
+        }
     }
 }

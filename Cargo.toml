@@ -1,9 +1,9 @@
 # TreeClip - A CLI tool to traverse project files and extract them into file/clipboard
 #
 # Development Phases:
-# 1. MVP: Directory traversal, clipboard output, editor integration
-# 2. Enhanced: .treeclipignore, starred directories, config support
-# 3. Advanced: History management, search, interactive TUI
+# 1. MVP: Directory traversal, clipboard output, editor integration ✅
+# 2. Enhanced: .treeclipignore, starred directories, config support ✅
+# 3. Advanced: History management, search, interactive TUI (Future)
 #
 # See README.md for full feature roadmap and implementation details.
 
@@ -33,17 +33,21 @@ rand = "0.10.0-rc.5"
 unicode-width = "0.2.2"
 
 [profile.release]
-lto = true
-codegen-units = 1
-strip = true
+lto = true           # Link-time optimization for smaller binaries
+codegen-units = 1    # Better optimization at cost of compile time
+strip = true         # Strip symbols for smaller binary
+opt-level = 3        # Maximum optimization
 
 [profile.dev]
-opt-level = 1  # Faster compile times while developing
+opt-level = 1        # Faster compile times while developing
 
 [profile.test]
-opt-level = 1
+opt-level = 1        # Reasonable performance for tests
 
 [[bin]]
 name = "treeclip"
 path = "src/main.rs"
-doc = false
+doc = false          # Binary doesn't need doc tests
+
+[dev-dependencies]
+# Test dependencies would go here if needed

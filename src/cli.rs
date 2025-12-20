@@ -1,6 +1,9 @@
+//! cli - Defines the command-line interface structure and available commands.
+
 use crate::commands::args;
 use clap::Parser;
 
+/// Main CLI structure for TreeClip application.
 #[derive(Parser)]
 #[command(name = "treeclip")]
 #[command(version = env!("CARGO_PKG_VERSION"))]
@@ -14,6 +17,7 @@ pub struct Cli {
     pub command: Commands,
 }
 
+/// Available subcommands for TreeClip.
 #[derive(clap::Subcommand)]
 pub enum Commands {
     /// Run treeclip on a directory
@@ -21,14 +25,13 @@ pub enum Commands {
 }
 
 #[cfg(test)]
-mod tests {
+mod cli_tests {
     use super::*;
     use clap::Parser;
     use std::path::PathBuf;
 
     #[test]
     fn test_cli_parse_run_command() {
-        // Test basic run command
         let cli = Cli::parse_from(&["treeclip", "run", "test_dir"]);
         match cli.command {
             Commands::Run(args) => {
@@ -73,6 +76,17 @@ mod tests {
                 assert!(args.clipboard);
                 assert!(args.editor);
                 assert!(args.verbose);
+            }
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_with_fast_mode() {
+        let cli = Cli::parse_from(&["treeclip", "run", ".", "--fast-mode"]);
+
+        match cli.command {
+            Commands::Run(args) => {
+                assert!(args.fast_mode);
             }
         }
     }
