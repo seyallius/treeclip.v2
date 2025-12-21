@@ -1,0 +1,60 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    # Grant permissions to the workflow to push commits and tags.
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Fetch all history and tags for git-cliff to work correctly
+          fetch-depth: 0
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Install git-cliff
+        run: cargo install git-cliff
+
+      - name: Get previous version
+        id: pre_version
+        run: |
+          echo "tag=$(git describe --tags --abbrev=0)" >> $GITHUB_OUTPUT
+
+      - name: Run git-cliff to bump version and generate changelog
+        id: cliff
+        run: |
+          git-cliff --bump -o CHANGELOG.md
+          echo "changelog_generated=true" >> $GITHUB_ENV
+
+      - name: Get new version
+        id: version
+        run: |
+          echo "version=$(grep '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/')" >> $GITHUB_ENV
+          
+      - name: Commit and Tag
+        run: |
+          # Don't commit if the version hasn't changed
+          if [ "${{ steps.pre_version.outputs.tag }}" == "v${{ env.version }}" ]; then
+            echo "Version has not changed. No new release."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Cargo.toml CHANGELOG.md
+          git commit -m "chore(release): v${{ env.version }}"
+          git tag -a "v${{ env.version }}" -m "Release v${{ env.version }}"
+          git push
+          git push --tags
