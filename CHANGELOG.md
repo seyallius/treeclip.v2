@@ -3,6 +3,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.9.1](https://github.com/seyedali-dev/treeclip.v2/compare/v0.9.0...v0.9.1) - 2025-12-24
+
+### Added
+
+- release-plz
+- *(release)* set up automated release versioning
+- *(changelog)* set up changelog
+
+### Other
+
+- so what? i use ai cli tools as well. the free ones
+
 
 
 ### 📝 Other Commits
