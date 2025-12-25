@@ -2,6 +2,13 @@
 
 *A delightfully fast CLI tool that bundles your code into a single, AI-friendly format*
 
+<p align="center">
+<sub><strong>Author’s Note:</strong>  
+This README was drafted with AI assistance. <br/>
+I’m usually too lazy to write proper docs, but I actually reviewed this one, so it shouldn’t be too cursed...<br/>
+Besides, it writes better than me ( ¬ ࡇ,¬ )</sub>
+</p>
+
 ---
 
 ## What's This All About? (◕‿◕✿)
