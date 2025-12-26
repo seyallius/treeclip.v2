@@ -410,4 +410,59 @@ mod walker_tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_traverse_walker_ignores_wildcard() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
+        let output = temp_dir.path().join("output.txt");
+
+        let main = temp_dir.path().join("main.rs");
+        fs::write(&main, "fn main() { println!(\"Hello world\"); }")?;
+        let main_test = temp_dir.path().join("main_test.rs");
+        fs::write(
+            &main_test,
+            "fn test_main() { println!(\"Test hello world\"); }",
+        )?;
+        let go = temp_dir.path().join("main.go");
+        fs::write(
+            &go,
+            "Package main import \"fmt\" func main() { fmt.Println(\"Hello world\") }",
+        )?;
+
+        let exclude_patterns = vec!["*_test.rs".to_string(), "*.go".to_string()];
+        let walker = Walker::new(
+            temp_dir.path(),
+            &temp_dir.path(),
+            &output,
+            &exclude_patterns,
+        );
+        let args = RunArgs {
+            input_path: temp_dir.path().to_path_buf(),
+            output_path: Some(output.to_path_buf()),
+            root: Some(temp_dir.path().to_path_buf()),
+            exclude: exclude_patterns,
+            clipboard: false,
+            stats: false,
+            editor: false,
+            delete: false,
+            verbose: false,
+            skip_hidden: false,
+            raw: true,
+            fast_mode: true,
+        };
+
+        let result = walker.traverse(&args);
+        assert!(result.is_ok());
+
+        // Read and verify output
+        let output_content = fs::read_to_string(&output)?;
+
+        assert!(output_content.contains("==> main.rs"));
+        assert!(output_content.contains("fn main() { println!(\"Hello world\"); }"));
+
+        assert!(!output_content.contains("==> main_test.rs"));
+        assert!(!output_content.contains("fn test_main() { println!(\"Test hello world\"); }"));
+
+        Ok(())
+    }
 }

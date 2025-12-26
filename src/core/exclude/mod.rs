@@ -252,4 +252,38 @@ mod exclude_tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_wildcard_cli_patterns() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
+        let root = temp_dir.path();
+
+        let patterns = vec![
+            "*.log".to_string(),
+            "*_test.rs".to_string(),
+        ];
+
+        let matcher = ExcludeMatcher::new(root, &patterns)?;
+
+        // Create test files/dirs
+        let log_file = root.join("test.log");
+        fs::write(&log_file, "")?;
+
+        let rs_file = root.join("main.rs");
+        fs::write(&rs_file, "")?;
+
+        let test_rs_file = root.join("main_test.rs");
+        fs::write(&test_rs_file, "")?;
+
+        // .log files should be excluded
+        assert!(matcher.is_excluded(&log_file));
+
+        // .rs files should not be excluded
+        assert!(!matcher.is_excluded(&rs_file));
+
+        // *_test.rs files should be excluded
+        assert!(matcher.is_excluded(&test_rs_file));
+
+        Ok(())
+    }
 }
