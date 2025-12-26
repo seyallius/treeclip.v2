@@ -3,6 +3,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.9.8](https://github.com/seyallius/treeclip.v2/compare/v0.9.7...v0.9.8) - 2025-12-26
+
+### Other
+
+- Update README.md
+
 ## [0.9.7](https://github.com/seyallius/treeclip.v2/compare/v0.9.6...v0.9.7) - 2025-12-26
 
 ### Fixed
