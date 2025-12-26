@@ -6,7 +6,7 @@
 <sub><strong>Author’s Note:</strong>  
 This README was drafted with AI assistance. <br/>
 I’m usually too lazy to write proper docs, but I actually reviewed this one, so it shouldn’t be too cursed...<br/>
-Besides, it writes better than me ( ¬ ࡇ,¬ )</sub>
+Besides, it writes better than me ( ¬ ࡇ,¬ )<br/>Though the code is written by me! no AI in that!</sub>
 </p>
 
 ---
@@ -338,7 +338,7 @@ treeclip run \
 
 ---
 
-## Future Plans 🚧
+## TODO (Future Plans) 🚧
 
 - [ ] Configuration file support (`.treecliprc`)
 - [ ] Interactive mode for selecting files
@@ -349,7 +349,11 @@ treeclip run \
 - [ ] Plugin system for custom processors
 - [ ] Multiple inputs
 - [ ] Commands and Options completion
-- [ ] Add don't overrite output file option
+- [ ] Add don't overwrite output file option
+- [ ] Add tree option showing and writing a tree structure of traversed file(s)
+- [ ] Optimize performance (use concurrency and parallelism)
+- [ ] Add init option for basic init (.treeclipignore with basic init like .gitignore)
+- [ ] Add link to existing ignore file ↑
 
 But honestly? I built this to learn Rust and solve my immediate problem. If you find it useful, awesome! If you want to
 contribute, even better! ♡
