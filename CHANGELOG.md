@@ -3,6 +3,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.10.0](https://github.com/seyallius/treeclip.v2/compare/v0.9.7...v0.10.0) - 2025-12-27
+
+### Added
+
+- [**breaking**] implement multiple input paths as option
+
+### Other
+
+- Update README.md
+
 ## [0.9.7](https://github.com/seyallius/treeclip.v2/compare/v0.9.6...v0.9.7) - 2025-12-26
 
 ### Fixed
