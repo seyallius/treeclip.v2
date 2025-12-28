@@ -1,9 +1,11 @@
 //! exclude - Handles file and directory exclusion patterns using gitignore-style rules.
 
-use crate::core::errors::PatternError;
+use crate::core::errors::{FileSystemError, PatternError};
 use crate::core::ui::messages::Messages;
 use anyhow::Context;
 use ignore::gitignore::{Gitignore, GitignoreBuilder};
+use std::fs::File;
+use std::io::{Read, Seek, Write};
 use std::path::Path;
 
 /// ExcludeMatcher determines whether paths should be excluded from traversal.
@@ -33,6 +35,9 @@ impl ExcludeMatcher {
         // Add CLI patterns
         Self::add_cli_patterns(&mut builder, cli_patterns)
             .with_context(|| "Failed to process command-line exclusion patterns")?;
+
+        // Add already gitignore file if present and configured
+        Self::add_present_ignore_content(root)?;
 
         let inner = builder
             .build()
@@ -96,6 +101,97 @@ impl ExcludeMatcher {
                     )
                 })?;
         }
+        Ok(())
+    }
+
+    /// Adds .gitignore content to .treeclipignore if present.
+    fn add_present_ignore_content(root: &Path) -> anyhow::Result<()> {
+        //todo: very very bad and inefficient code
+        // - What if treeclipignore is present? This will overwrite it? No it won't but it's still inefficient.
+        // - What if after .gitignore file copied to end, then added a custom one, then ran treeclip again? It will duplicate it!
+        // - Inefficient code. Unnecessary ram and cpu usage.
+
+        let git_ignore_path = root.join(".gitignore");
+        let mut git_ignore_file = File::options()
+            .read(true)
+            .write(false)
+            .open(&git_ignore_path)
+            .map_err(|e| FileSystemError::ReadFailed {
+                path: git_ignore_path.to_path_buf(),
+                source: e,
+            })
+            .with_context(|| "Failed to open .gitignore file")?;
+
+        let mut buffer = String::new();
+        git_ignore_file
+            .read_to_string(&mut buffer)
+            .map_err(|e| FileSystemError::ReadFailed {
+                path: git_ignore_path,
+                source: e,
+            })
+            .with_context(|| "Failed to copy contents of .treeclipignore")?;
+
+        let treeclip_ignore_path = root.join(".treeclipignore");
+        let mut treeclipignore_file = File::options()
+            .write(true)
+            .truncate(false) // Only truncate on first traversal
+            .create(true)
+            .open(&treeclip_ignore_path)
+            .map_err(|e| FileSystemError::WriteFailed {
+                path: treeclip_ignore_path.to_path_buf(),
+                source: e,
+            })
+            .with_context(|| {
+                format!(
+                    "Failed to create or open .treeclipignore file: {}",
+                    treeclip_ignore_path.display()
+                )
+            })?;
+
+        treeclipignore_file
+            .seek(std::io::SeekFrom::End(0))
+            .with_context(|| {
+                format!(
+                    "Failed to seek to end of .treeclipignore file: {}",
+                    treeclip_ignore_path.display()
+                )
+            })?;
+
+        // oofff bad code!
+        writeln!(treeclipignore_file, "\n\n#---------------==> content from .gitignore <==---------------")
+            .map_err(|e| FileSystemError::WriteFailed {
+                path: treeclip_ignore_path.to_path_buf(),
+                source: e,
+            })
+            .with_context(|| {
+                format!(
+                    "Failed to write newline separator to: {}",
+                    treeclip_ignore_path.display()
+                )
+            })?;
+        writeln!(treeclipignore_file, "{}", buffer)
+            .map_err(|e| FileSystemError::WriteFailed {
+                path: treeclip_ignore_path.to_path_buf(),
+                source: e,
+            })
+            .with_context(|| {
+                format!(
+                    "Failed to write newline separator to: {}",
+                    treeclip_ignore_path.display()
+                )
+            })?;
+        writeln!(treeclipignore_file, "#---------------==> end <==---------------")
+            .map_err(|e| FileSystemError::WriteFailed {
+                path: treeclip_ignore_path.to_path_buf(),
+                source: e,
+            })
+            .with_context(|| {
+                format!(
+                    "Failed to write newline separator to: {}",
+                    treeclip_ignore_path.display()
+                )
+            })?;
+
         Ok(())
     }
 }
