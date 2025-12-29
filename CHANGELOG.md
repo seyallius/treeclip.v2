@@ -3,6 +3,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.1.0](https://github.com/seyallius/treeclip.v2/compare/v1.0.0...v1.1.0) - 2025-12-29
+
+### Added
+
+- add automatic gitignore reading (wip)
+
+### Fixed
+
+- appending output file
+
 ## [0.10.0](https://github.com/seyallius/treeclip.v2/compare/v0.9.7...v0.10.0) - 2025-12-27
 
 ### Added
