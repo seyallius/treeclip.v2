@@ -3,6 +3,7 @@
 use super::args::RunArgs;
 use crate::core::ui::{animations, banner, formatter, messages};
 use crate::core::{clipboard, editor, traversal::walker};
+use anyhow::Context;
 use std::path::{Path, PathBuf};
 use std::{env, fs};
 
@@ -26,28 +27,7 @@ pub fn execute(mut args: RunArgs) -> anyhow::Result<()> {
     log_config(&args)?;
 
     // Execute traversal for each input path
-    let mut any_success = false;
-    for input in inputs {
-        match execute_traversal(&args, root, input, output) {
-            Ok(()) => any_success = true,
-            Err(e) => {
-                // If it's a "No files found" error, continue to next path
-                if e.to_string().contains("No files found") {
-                    eprintln!("Warning: No files found in directory: {}", input.display());
-                    continue;
-                } else {
-                    return Err(e);
-                }
-            }
-        }
-    }
-
-    // If no directories had any files, return an error
-    if !any_success {
-        return Err(anyhow::anyhow!(
-            "No files found in any of the specified directories"
-        ));
-    }
+    execute_traversal(&args, root, inputs, output)?;
 
     // Handle clipboard operations
     handle_clipboard(&args, output)?;
@@ -105,7 +85,7 @@ fn normalize_paths(args: &mut RunArgs) -> anyhow::Result<()> {
 fn execute_traversal(
     args: &RunArgs,
     root: &Path,
-    input: &Path,
+    inputs: &Vec<PathBuf>,
     output: &Path,
 ) -> anyhow::Result<()> {
     println!("\n{}", messages::Messages::starting_adventure());
@@ -114,7 +94,7 @@ fn execute_traversal(
         animations::animated_dots(&messages::Messages::scanning_files(), 3, 300);
     }
 
-    let walker = walker::Walker::new(root, input, output, &args.exclude);
+    let walker = walker::Walker::new(root, inputs, output, &args.exclude);
 
     if !args.fast_mode {
         let spinner = animations::Spinner::new_tree();
