@@ -51,7 +51,7 @@ impl Spinner {
             print!(
                 "\r{} {} {}",
                 frame.color(*color),
-                message.bright_cyan(),
+                message.cyan(),
                 "...".dimmed()
             );
             stdout().flush().unwrap();
@@ -60,8 +60,8 @@ impl Spinner {
 
         println!(
             "\r{} {} {}",
-            "✓".bright_green(),
-            message.bright_green(),
+            "✓".green(),
+            message.green(),
             "Done!".dimmed()
         );
     }
@@ -75,9 +75,9 @@ impl Spinner {
 /// * `count` - Number of dots to animate
 /// * `delay_ms` - Delay between each dot in milliseconds
 pub fn animated_dots(text: &str, count: usize, delay_ms: u64) {
-    print!("{}", text.bright_yellow());
+    print!("{}", text.yellow());
     for _ in 0..count {
-        print!("{}", ".".bright_yellow());
+        print!("{}", ".".yellow());
         stdout().flush().unwrap();
         thread::sleep(time::Duration::from_millis(delay_ms));
     }

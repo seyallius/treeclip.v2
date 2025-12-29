@@ -17,8 +17,8 @@ impl ConfigFormatter {
         format!(
             "\n{} {}\n{}",
             icon,
-            title.bright_blue().bold(),
-            "─".repeat(BOX_WIDTH).bright_blue()
+            title.blue().bold(),
+            "─".repeat(BOX_WIDTH).blue()
         )
     }
 
@@ -108,20 +108,20 @@ impl StatsBox {
         match self.bytes {
             0..=1023 => (
                 "🐣".to_string(),
-                "Tiny but mighty!".bright_yellow().to_string(),
+                "Tiny but mighty!".yellow().to_string(),
             ),
             1024..=102399 => (
                 "🐇".to_string(),
-                "Perfect size! Easy to handle~".bright_green().to_string(),
+                "Perfect size! Easy to handle~".green().to_string(),
             ),
             102400..=1048575 => (
                 "🐘".to_string(),
-                "That's a big one! Impressive~".bright_cyan().to_string(),
+                "That's a big one! Impressive~".cyan().to_string(),
             ),
             _ => (
                 "🐋".to_string(),
                 "Whoa! You've got a whale of content!"
-                    .bright_blue()
+                    .blue()
                     .to_string(),
             ),
         }

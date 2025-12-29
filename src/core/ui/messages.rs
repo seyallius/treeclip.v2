@@ -11,14 +11,14 @@ impl Messages {
     /// Returns the starting adventure message.
     pub fn starting_adventure() -> String {
         "🌳 Starting the tree adventure..."
-            .bright_cyan()
+            .bright_white()
             .bold()
             .to_string()
     }
 
     /// Returns the scanning files message.
     pub fn scanning_files() -> String {
-        "🔍 Scanning files".bright_yellow().to_string()
+        "🔍 Scanning files".blue().to_string()
     }
 
     // -------------------- Progress Messages --------------------
@@ -31,7 +31,7 @@ impl Messages {
     /// Returns the gathering leaves success message.
     pub fn gathering_leaves() -> String {
         "🎉 Successfully gathered all the leaves!"
-            .bright_green()
+            .green()
             .bold()
             .to_string()
     }
@@ -48,7 +48,7 @@ impl Messages {
         format!(
             "{} {}",
             "📋".green(),
-            "Clipboard updated! Ready to paste anywhere~".bright_green()
+            "Clipboard updated! Ready to paste anywhere~".green()
         )
     }
 
@@ -64,20 +64,20 @@ impl Messages {
     /// Returns the opening editor message.
     pub fn opening_editor() -> String {
         "✏️  Opening your treasure chest..."
-            .bright_cyan()
+            .blue()
             .bold()
             .to_string()
     }
 
     /// Returns the editor opened message.
     pub fn editor_opened() -> String {
-        "👀 Hope you like what you see!".bright_cyan().to_string()
+        "👀 Hope you like what you see!".blue().to_string()
     }
 
     /// Returns the cleaning up message.
     pub fn cleaning_up() -> String {
         "🗑️  Cleaning up after the party..."
-            .bright_yellow()
+            .blue()
             .bold()
             .to_string()
     }
@@ -85,7 +85,7 @@ impl Messages {
     /// Returns the cleaned up message.
     pub fn cleaned_up() -> String {
         "✨ All cleaned up! No traces left behind~"
-            .bright_green()
+            .green()
             .to_string()
     }
 
@@ -101,8 +101,8 @@ impl Messages {
     pub fn ready_to_launch() -> String {
         format!(
             "\n{}\n{}",
-            "🚀 Ready to launch!".bright_green().bold(),
-            "─".repeat(55).bright_green()
+            "🚀 Ready to launch!".green().bold(),
+            "─".repeat(55).green()
         )
     }
 
@@ -114,7 +114,7 @@ impl Messages {
             "  {} {:<width$} {}",
             "🔍".cyan(),
             "Found ignore file:".bold(),
-            path.bright_cyan(),
+            path.blue(),
             width = 20
         )
     }
