@@ -3,8 +3,8 @@
 use crate::commands::args::RunArgs;
 use crate::core::errors::{FileSystemError, TraversalError};
 use crate::core::traversal::filter;
-use crate::core::ui::{animations, formatter};
-use crate::core::{exclude, tree, utils};
+use crate::core::ui::animations;
+use crate::core::{exclude, tree, ui, utils};
 use anyhow::Context;
 use colored::Colorize;
 use std::fs;
@@ -154,10 +154,7 @@ impl Walker {
             }
 
             if run_args.tree && is_last {
-                println!(
-                    "{}",
-                    formatter::ConfigFormatter::format_section_header("Tree!", "T")
-                );
+                println!("\n{}\n", ui::messages::Messages::tree_structure_enabled());
 
                 writeln!(file)?;
                 writeln!(file, "Directory structure:")?;

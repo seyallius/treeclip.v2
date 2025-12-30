@@ -125,6 +125,13 @@ impl Messages {
             .dimmed()
             .to_string()
     }
+
+    pub fn tree_structure_enabled() -> String {
+        "Tree structure enabled. See the end of output file for the directory structure."
+            .bright_white()
+            .bold()
+            .to_string()
+    }
 }
 
 #[cfg(test)]
