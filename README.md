@@ -85,19 +85,19 @@ Now you can paste the entire project structure into your favorite AI chat! Easy 
 
 Here’s a quick guide to some of the most useful commands. The table below covers most scenarios you'll encounter!
 
-| #      | Scenario                                        | Command                                                                                                        | What It Does                                                                                                     | When To Use                                         |
-|--------|-------------------------------------------------|----------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------|
-| **1**  | **Quick Clipboard Copy**<br>*(My Daily Driver)* | `treeclip run --clipboard`                                                                                     | • Scans current directory<br>• Creates `treeclip_temp.txt`<br>• Copies to clipboard<br>• Shows tree emojis 🌳    | Pasting code into ChatGPT/Claude/etc                |
-| **2**  | **Specific Directory + Custom Output**          | `treeclip run ./src -o ./docs/dump.txt`                                                                        | • Scans `./src` only<br>• Saves to custom location<br>• Doesn't touch clipboard                                  | Documenting parts of project, creating archives     |
-| **3**  | **Exclude Build Artifacts**                     | `treeclip run -e node_modules -e target -e .git`                                                               | • Scans current directory<br>• Ignores specified patterns<br>• Can stack multiple `-e` flags                     | Projects with dependencies/build outputs            |
-| **4**  | **Review Before Sharing**                       | `treeclip run --editor --delete`                                                                               | • Creates temp file<br>• Opens in `$EDITOR`<br>• Deletes after closing                                           | When you want to edit before sharing                |
-| **5**  | **The Full Experience™**                        | `treeclip run ./my-project -o ./export/snapshot.txt -e node_modules -e "*.lock" --clipboard --stats --verbose` | • Everything at once<br>• Full control<br>• Maximum verbosity<br>• Statistics shown                              | When you want ALL the features                      |
-| **6**  | **Fast Mode (No Animations)**                   | `treeclip run --fast-mode --clipboard`                                                                         | • Instant execution<br>• No progress bars<br>• No cute emojis 😢                                                 | CI/CD, scripts, large projects, or when in a hurry  |
-| **7**  | **Include Hidden Files**                        | `treeclip run --no-skip-hidden`                                                                                | • Includes `.env.example`, `.editorconfig`, etc<br>• Normally skipped by default                                 | When you need config files included                 |
-| **8**  | **Stats Without Clipboard**                     | `treeclip run --stats`                                                                                         | • Creates output file<br>• Shows lines/words/bytes<br>• Size emoji feedback 🐣🐘🐋                               | Analyzing codebase size                             |
-| **9**  | **Just Save to File**                           | `treeclip run ./src -o output.txt --fast-mode`                                                                 | • No clipboard<br>• No stats<br>• Just saves file quickly                                                        | Archiving, documentation generation                 |
-| **10** | **Verbose Progress Tracking**                   | `treeclip run --verbose --clipboard`                                                                           | • Shows every step<br>• File count updates<br>• Detailed logging                                                 | Debugging, understanding what's included            |
-| **11** | **Multiple Directories**                        | `treeclip run ./src ./tests ./examples -o combined.txt`                                                        | • Combines files from multiple directories<br>• Single output file<br>• Preserves directory structure in headers | When you need to bundle multiple parts of a project |
+| #      | Scenario                                        | Command                                                                                                               | What It Does                                                                                                      | When To Use                                         |
+|--------|-------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------|
+| **1**  | **Quick Clipboard Copy**<br>*(My Daily Driver)* | `treeclip run --clipboard`                                                                                            | • Scans current directory<br>• Creates `treeclip_temp.txt`<br>• Copies to clipboard<br>• Shows tree emojis 🌳     | Pasting code into ChatGPT/Claude/etc                |
+| **2**  | **Specific Directory + Custom Output**          | `treeclip run ./src -o ./docs/dump.txt`                                                                               | • Scans `./src` only<br>• Saves to custom location<br>• Doesn't touch clipboard                                   | Documenting parts of project, creating archives     |
+| **3**  | **Exclude Build Artifacts**                     | `treeclip run -e node_modules -e target -e .git`                                                                      | • Scans current directory<br>• Ignores specified patterns<br>• Can stack multiple `-e` flags                      | Projects with dependencies/build outputs            |
+| **4**  | **Review Before Sharing**                       | `treeclip run --editor --delete`                                                                                      | • Creates temp file<br>• Opens in `$EDITOR`<br>• Deletes after closing                                            | When you want to edit before sharing                |
+| **5**  | **The Full Experience™**                        | `treeclip run ./my-project -o ./export/snapshot.txt -e node_modules -e "*.lock" --clipboard --stats --verbose --tree` | • Everything at once<br>• Full control<br>• Maximum verbosity<br>• Statistics shown<br>• Tree Structure in output | When you want ALL the features                      |
+| **6**  | **Fast Mode (No Animations)**                   | `treeclip run --fast-mode --clipboard`                                                                                | • Instant execution<br>• No progress bars<br>• No cute emojis 😢                                                  | CI/CD, scripts, large projects, or when in a hurry  |
+| **7**  | **Include Hidden Files**                        | `treeclip run --no-skip-hidden`                                                                                       | • Includes `.env.example`, `.editorconfig`, etc<br>• Normally skipped by default                                  | When you need config files included                 |
+| **8**  | **Stats Without Clipboard**                     | `treeclip run --stats`                                                                                                | • Creates output file<br>• Shows lines/words/bytes<br>• Size emoji feedback 🐣🐘🐋                                | Analyzing codebase size                             |
+| **9**  | **Just Save to File**                           | `treeclip run ./src -o output.txt --fast-mode`                                                                        | • No clipboard<br>• No stats<br>• Just saves file quickly                                                         | Archiving, documentation generation                 |
+| **10** | **Verbose Progress Tracking**                   | `treeclip run --verbose --clipboard`                                                                                  | • Shows every step<br>• File count updates<br>• Detailed logging                                                  | Debugging, understanding what's included            |
+| **11** | **Multiple Directories**                        | `treeclip run ./src ./tests ./examples -o combined.txt`                                                               | • Combines files from multiple directories<br>• Single output file<br>• Preserves directory structure in headers  | When you need to bundle multiple parts of a project |
 
 ### Pro-Tip: Use a `.treeclipignore` File!
 
@@ -151,22 +151,23 @@ treeclip run . docs/ scripts/ -e node_modules -e target -o project.txt
 
 ### Optional Arguments
 
-| Flag                   | Short | Description                          | Default               |
-|------------------------|-------|--------------------------------------|-----------------------|
-| `--output-path <PATH>` | `-o`  | Where to save the output file        | `./treeclip_temp.txt` |
-| `--root <PATH>`        |       | Root directory for `.treeclipignore` | `.`                   |
-| `--exclude <PATTERN>`  | `-e`  | Patterns to exclude (can repeat)     | None                  |
-| `--clipboard`          | `-c`  | Copy output to clipboard             | Off                   |
-| `--stats`              |       | Show content statistics              | Off                   |
-| `--editor`             |       | Open output in default editor        | Off                   |
-| `--delete`             |       | Delete output after closing editor   | Off                   |
-| `--verbose`            | `-v`  | Show detailed progress               | Off                   |
-| `--skip-hidden`        | `-H`  | Skip hidden files/folders            | **On**                |
-| `--no-skip-hidden`     |       | Include hidden files                 | Off                   |
-| `--raw`                | `-r`  | Extract raw content                  | **On**                |
-| `--fast-mode`          | `-f`  | Skip animations, instant execution   | Off                   |
-| `--help`               | `-h`  | Show help message                    | -                     |
-| `--version`            | `-V`  | Show version                         | -                     |
+| Flag                   | Short | Description                                                               | Default               |
+|------------------------|-------|---------------------------------------------------------------------------|-----------------------|
+| `--output-path <PATH>` | `-o`  | Where to save the output file                                             | `./treeclip_temp.txt` |
+| `--root <PATH>`        |       | Root directory for `.treeclipignore`                                      | `.`                   |
+| `--exclude <PATTERN>`  | `-e`  | Patterns to exclude (can repeat)                                          | None                  |
+| `--clipboard`          | `-c`  | Copy output to clipboard                                                  | Off                   |
+| `--stats`              |       | Show content statistics                                                   | Off                   |
+| `--tree`               | `-t`  | Write the directory structure at the end of output file in tree structure | Off                   |
+| `--editor`             |       | Open output in default editor                                             | Off                   |
+| `--delete`             |       | Delete output after closing editor                                        | Off                   |
+| `--verbose`            | `-v`  | Show detailed progress                                                    | Off                   |
+| `--skip-hidden`        | `-H`  | Skip hidden files/folders                                                 | **On**                |
+| `--no-skip-hidden`     |       | Include hidden files                                                      | Off                   |
+| `--raw`                | `-r`  | Extract raw content                                                       | **On**                |
+| `--fast-mode`          | `-f`  | Skip animations, instant execution                                        | Off                   |
+| `--help`               | `-h`  | Show help message                                                         | -                     |
+| `--version`            | `-V`  | Show version                                                              | -                     |
 
 ---
 
@@ -190,6 +191,34 @@ pub fn add(left: usize, right: usize) -> usize {
 fn it_works() {
     assert_eq!(2 + 2, 4);
 }
+```
+
+If tree option is enabled:
+```text
+==> src/main.rs
+fn main() {
+    println!("Hello, world!");
+}
+
+==> src/lib.rs
+pub fn add(left: usize, right: usize) -> usize {
+    left + right
+}
+
+==> tests/integration_test.rs
+#[test]
+fn it_works() {
+    assert_eq!(2 + 2, 4);
+}
+
+Directory structure:
+\```
+src
+├── lib.rs
+├── tests
+│   └── integration_test.rs
+└── main.rs
+\```
 ```
 
 Each file is clearly separated with its path, making it easy for AI to understand your project structure. No confusion,
