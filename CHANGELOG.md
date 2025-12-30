@@ -3,6 +3,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.2.1](https://github.com/seyallius/treeclip.v2/compare/v1.2.0...v1.2.1) - 2025-12-30
+
+### Fixed
+
+- add tree option flag in readme
+
 ## [1.2.0](https://github.com/seyallius/treeclip.v2/compare/v1.1.1...v1.2.0) - 2025-12-30
 
 ### Added
