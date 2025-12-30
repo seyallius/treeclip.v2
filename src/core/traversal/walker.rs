@@ -3,8 +3,8 @@
 use crate::commands::args::RunArgs;
 use crate::core::errors::{FileSystemError, TraversalError};
 use crate::core::traversal::filter;
-use crate::core::ui::animations;
-use crate::core::{exclude, utils};
+use crate::core::ui::{animations, formatter};
+use crate::core::{exclude, tree, utils};
 use anyhow::Context;
 use colored::Colorize;
 use std::fs;
@@ -80,22 +80,23 @@ impl Walker {
             })?;
 
         // NOTE: Consider parallelizing this traversal for large directories (rayon crate)
-        let walker = self.inputs.iter().flat_map(|input| {
-            WalkDir::new(input).into_iter().filter_entry(|entry| {
-                let excluded = matcher.is_excluded(entry.path());
-                let non_hidden_path =
-                    !run_args.skip_hidden || !filter::is_hidden(entry, run_args.verbose);
-                !excluded && non_hidden_path
+        let mut walker = self
+            .inputs
+            .iter()
+            .flat_map(|input| {
+                WalkDir::new(input).into_iter().filter_entry(|entry| {
+                    let excluded = matcher.is_excluded(entry.path());
+                    let non_hidden_path =
+                        !run_args.skip_hidden || !filter::is_hidden(entry, run_args.verbose);
+                    !excluded && non_hidden_path
+                })
             })
-        });
-
-        // Determine if this is the first traversal (to decide whether to truncate or append)
-        // let is_first_traversal = !self.output.exists();
+            .peekable();
 
         // TODO: Consider using BufWriter for better I/O performance on large outputs
         let mut file = File::options()
             .write(true)
-            .truncate(true) // Only truncate on first traversal
+            .truncate(true)
             .create(true)
             .open(&self.output)
             .map_err(|e| FileSystemError::WriteFailed {
@@ -109,28 +110,17 @@ impl Walker {
                 )
             })?;
 
-        // If not the first traversal, move to the end of the file to append
-        // if !is_first_traversal {
-        //     use std::io::Seek;
-        //     file.seek(std::io::SeekFrom::End(0)).with_context(|| {
-        //         format!(
-        //             "Failed to seek to end of output file: {}",
-        //             self.output.display()
-        //         )
-        //     })?;
-        // }
-
         let mut file_count = 0;
         let mut first = true; // Only true for first traversal
 
         let tree_emojis = vec!["🌱", "🌿", "🍃", "🌳", "🌲", "🎄"];
 
-        for entry in walker {
+        while let Some(entry) = walker.next() {
             let entry = entry
-                // .map_err(|e| TraversalError::WalkFailed {
-                //     path: self.inputs, // should do proper error handling
-                //     source: e,
-                // })
+                .map_err(|e| TraversalError::WalkFailed {
+                    path: PathBuf::from(format!("{:?}", self.inputs)), //note: bad! should be the actual path that got into error
+                    source: e,
+                })
                 .with_context(|| {
                     format!(
                         "Failed to access directory entry during traversal of: {:?}",
@@ -138,6 +128,7 @@ impl Walker {
                     )
                 })?;
 
+            let is_last = walker.peek().is_none();
             let entry_path = entry.path();
 
             // Skip reading output itself
@@ -160,6 +151,25 @@ impl Walker {
                     .with_context(|| {
                         format!("Failed to write content for file: {}", entry_path.display())
                     })?;
+            }
+
+            if run_args.tree && is_last {
+                println!(
+                    "{}",
+                    formatter::ConfigFormatter::format_section_header("Tree!", "T")
+                );
+
+                writeln!(file)?;
+                writeln!(file, "Directory structure:")?;
+                writeln!(file, "```")?;
+
+                let mut tree = tree::TreeState::new();
+                for input in &self.inputs {
+                    writeln!(file, "{}", input.display())?;
+                    tree::TreeState::write_tree(input, &mut file, &mut tree)?;
+                }
+
+                writeln!(file, "```")?;
             }
         }
 
@@ -313,6 +323,7 @@ mod walker_tests {
             skip_hidden: false,
             raw: true,
             fast_mode: true,
+            tree: false,
         };
 
         walker.traverse(&args)?;
@@ -357,6 +368,7 @@ mod walker_tests {
             skip_hidden: false,
             raw: true,
             fast_mode: true,
+            tree: false,
         };
 
         walker.traverse(&args)?;
@@ -401,6 +413,7 @@ mod walker_tests {
             skip_hidden: true,
             raw: true,
             fast_mode: true,
+            tree: false,
         };
 
         let result = walker.process_dir(&args);
@@ -434,6 +447,7 @@ mod walker_tests {
             skip_hidden: false,
             raw: true,
             fast_mode: true,
+            tree: false,
         };
 
         let result = walker.traverse(&args);
@@ -483,6 +497,7 @@ mod walker_tests {
             skip_hidden: false,
             raw: true,
             fast_mode: true,
+            tree: false,
         };
 
         let result = walker.traverse(&args);

@@ -266,6 +266,7 @@ mod run_tests {
             skip_hidden: true,
             raw: true,
             fast_mode: false,
+            tree: false,
         };
 
         normalize_paths(&mut args)?;

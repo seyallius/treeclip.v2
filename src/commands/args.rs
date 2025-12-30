@@ -174,6 +174,10 @@ pub struct RunArgs {
     ///   • When you're in a hurry!
     #[arg(short, long, default_value_t = false, verbatim_doc_comment)]
     pub fast_mode: bool,
+
+    /// Tree structure: show and write the tree structure of traversed dir(s)/file(s).
+    #[arg(short, long, default_value_t = false, verbatim_doc_comment)]
+    pub tree: bool,
 }
 
 // -------------------------------------------- Private Helper Functions --------------------------------------------
