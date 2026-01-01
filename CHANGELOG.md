@@ -3,6 +3,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.2.2](https://github.com/seyallius/treeclip.v2/compare/v1.2.1...v1.2.2) - 2026-01-01
+
+### Fixed
+
+- merge multiple input paths into unified tree structure
+
 ## [1.2.1](https://github.com/seyallius/treeclip.v2/compare/v1.2.0...v1.2.1) - 2025-12-30
 
 ### Fixed
