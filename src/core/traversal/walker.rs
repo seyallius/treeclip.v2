@@ -158,15 +158,9 @@ impl Walker {
 
                 writeln!(file)?;
                 writeln!(file, "Directory structure:")?;
-                writeln!(file, "```")?;
 
                 let mut tree = tree::TreeState::new();
-                for input in &self.inputs {
-                    writeln!(file, "{}", input.display())?;
-                    tree::TreeState::write_tree(input, &mut file, &mut tree)?;
-                }
-
-                writeln!(file, "```")?;
+                tree::TreeState::write_unified_tree(&self.inputs, &mut file, &mut tree)?;
             }
         }
 
