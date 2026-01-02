@@ -5,7 +5,7 @@ use crate::core::ui::messages::Messages;
 use anyhow::Context;
 use ignore::gitignore::{Gitignore, GitignoreBuilder};
 use std::fs::File;
-use std::io::{Read, Seek, Write};
+use std::io::{BufRead, BufReader, Read, Seek, Write};
 use std::path::Path;
 
 /// ExcludeMatcher determines whether paths should be excluded from traversal.
@@ -29,15 +29,15 @@ impl ExcludeMatcher {
     pub fn new(root: &Path, cli_patterns: &[String]) -> anyhow::Result<Self> {
         let mut builder = GitignoreBuilder::new(root);
 
+        // Add .gitignore content to .treeclipignore if present (only if not already added)
+        Self::sync_gitignore_to_treeclipignore(root)?;
+
         // Add .treeclipignore file patterns (if exists)
         Self::add_ignore_file(&mut builder, root)?;
 
         // Add CLI patterns
         Self::add_cli_patterns(&mut builder, cli_patterns)
             .with_context(|| "Failed to process command-line exclusion patterns")?;
-
-        // Add already gitignore file if present and configured
-        Self::add_present_ignore_content(root)?;
 
         let inner = builder
             .build()
@@ -104,17 +104,19 @@ impl ExcludeMatcher {
         Ok(())
     }
 
-    /// Adds .gitignore content to .treeclipignore if present.
-    fn add_present_ignore_content(root: &Path) -> anyhow::Result<()> {
-        //todo: very very bad and inefficient code
-        // - What if treeclipignore is present? This will overwrite it? No it won't but it's still inefficient.
-        // - What if after .gitignore file copied to end, then added a custom one, then ran treeclip again? It will duplicate it!
-        // - Inefficient code. Unnecessary ram and cpu usage.
-
+    /// Syncs .gitignore content to .treeclipignore if present and not already synced.
+    fn sync_gitignore_to_treeclipignore(root: &Path) -> anyhow::Result<()> {
         let git_ignore_path = root.join(".gitignore");
-        let mut git_ignore_file = File::options()
+        let treeclip_ignore_path = root.join(".treeclipignore");
+
+        // If .gitignore doesn't exist, nothing to sync
+        if !git_ignore_path.exists() {
+            return Ok(());
+        }
+
+        // Read .gitignore content
+        let git_ignore_file = File::options()
             .read(true)
-            .write(false)
             .open(&git_ignore_path)
             .map_err(|e| FileSystemError::ReadFailed {
                 path: git_ignore_path.to_path_buf(),
@@ -122,19 +124,49 @@ impl ExcludeMatcher {
             })
             .with_context(|| "Failed to open .gitignore file")?;
 
-        let mut buffer = String::new();
-        git_ignore_file
-            .read_to_string(&mut buffer)
-            .map_err(|e| FileSystemError::ReadFailed {
-                path: git_ignore_path,
+        let mut gitignore_lines = Vec::new();
+        for line in BufReader::new(git_ignore_file).lines() {
+            let line = line.map_err(|e| FileSystemError::ReadFailed {
+                path: git_ignore_path.clone(),
                 source: e,
-            })
-            .with_context(|| "Failed to copy contents of .treeclipignore")?;
+            })?;
+            gitignore_lines.push(line);
+        }
 
-        let treeclip_ignore_path = root.join(".treeclipignore");
+        // If .treeclipignore exists, check if content is already synced
+        if treeclip_ignore_path.exists() {
+            let treeclip_file = File::options()
+                .read(true)
+                .open(&treeclip_ignore_path)
+                .map_err(|e| FileSystemError::ReadFailed {
+                    path: treeclip_ignore_path.to_path_buf(),
+                    source: e,
+                })
+                .with_context(|| "Failed to open .treeclipignore file")?;
+
+            let treeclip_content = BufReader::new(treeclip_file)
+                .lines()
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|e| FileSystemError::ReadFailed {
+                    path: treeclip_ignore_path.clone(),
+                    source: e,
+                })?;
+
+            // Check if the gitignore marker section already exists
+            let has_marker = treeclip_content
+                .iter()
+                .any(|line| line.contains("content from .gitignore"));
+
+            // If marker exists, don't append again
+            if has_marker {
+                return Ok(());
+            }
+        }
+
+        // Append .gitignore content to .treeclipignore
         let mut treeclipignore_file = File::options()
             .write(true)
-            .truncate(false) // Only truncate on first traversal
+            .append(true)
             .create(true)
             .open(&treeclip_ignore_path)
             .map_err(|e| FileSystemError::WriteFailed {
@@ -148,49 +180,50 @@ impl ExcludeMatcher {
                 )
             })?;
 
-        treeclipignore_file
-            .seek(std::io::SeekFrom::End(0))
-            .with_context(|| {
-                format!(
-                    "Failed to seek to end of .treeclipignore file: {}",
-                    treeclip_ignore_path.display()
-                )
-            })?;
+        // Write marker and gitignore content
+        writeln!(
+            treeclipignore_file,
+            "\n\n#---------------==> content from .gitignore (Do not edit) <==---------------"
+        )
+        .map_err(|e| FileSystemError::WriteFailed {
+            path: treeclip_ignore_path.to_path_buf(),
+            source: e,
+        })
+        .with_context(|| {
+            format!(
+                "Failed to write marker to: {}",
+                treeclip_ignore_path.display()
+            )
+        })?;
 
-        // oofff bad code!
-        writeln!(treeclipignore_file, "\n\n#---------------==> content from .gitignore <==---------------")
-            .map_err(|e| FileSystemError::WriteFailed {
-                path: treeclip_ignore_path.to_path_buf(),
-                source: e,
-            })
-            .with_context(|| {
-                format!(
-                    "Failed to write newline separator to: {}",
-                    treeclip_ignore_path.display()
-                )
-            })?;
-        writeln!(treeclipignore_file, "{}", buffer)
-            .map_err(|e| FileSystemError::WriteFailed {
-                path: treeclip_ignore_path.to_path_buf(),
-                source: e,
-            })
-            .with_context(|| {
-                format!(
-                    "Failed to write newline separator to: {}",
-                    treeclip_ignore_path.display()
-                )
-            })?;
-        writeln!(treeclipignore_file, "#---------------==> end <==---------------")
-            .map_err(|e| FileSystemError::WriteFailed {
-                path: treeclip_ignore_path.to_path_buf(),
-                source: e,
-            })
-            .with_context(|| {
-                format!(
-                    "Failed to write newline separator to: {}",
-                    treeclip_ignore_path.display()
-                )
-            })?;
+        for line in gitignore_lines {
+            writeln!(treeclipignore_file, "{}", line)
+                .map_err(|e| FileSystemError::WriteFailed {
+                    path: treeclip_ignore_path.to_path_buf(),
+                    source: e,
+                })
+                .with_context(|| {
+                    format!(
+                        "Failed to write gitignore content to: {}",
+                        treeclip_ignore_path.display()
+                    )
+                })?;
+        }
+
+        writeln!(
+            treeclipignore_file,
+            "#---------------==> end <==---------------"
+        )
+        .map_err(|e| FileSystemError::WriteFailed {
+            path: treeclip_ignore_path.to_path_buf(),
+            source: e,
+        })
+        .with_context(|| {
+            format!(
+                "Failed to write end marker to: {}",
+                treeclip_ignore_path.display()
+            )
+        })?;
 
         Ok(())
     }
@@ -376,6 +409,36 @@ mod exclude_tests {
 
         // *_test.rs files should be excluded
         assert!(matcher.is_excluded(&test_rs_file));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_gitignore_sync_no_duplication() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
+        let root = temp_dir.path();
+
+        // Create .gitignore
+        let gitignore = root.join(".gitignore");
+        fs::write(&gitignore, "node_modules\n*.log")?;
+
+        // First sync
+        ExcludeMatcher::new(root, &[])?;
+
+        // Read .treeclipignore
+        let treeclipignore = root.join(".treeclipignore");
+        let first_content = fs::read_to_string(&treeclipignore)?;
+
+        // Second sync - should not duplicate
+        ExcludeMatcher::new(root, &[])?;
+        let second_content = fs::read_to_string(&treeclipignore)?;
+
+        // Content should be identical
+        assert_eq!(first_content, second_content);
+
+        // Should only have one marker section
+        let marker_count = first_content.matches("content from .gitignore").count();
+        assert_eq!(marker_count, 1);
 
         Ok(())
     }
