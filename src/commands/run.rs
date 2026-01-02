@@ -219,9 +219,27 @@ fn log_config(args: &RunArgs) -> anyhow::Result<()> {
         ("📊", "Stats", formatter::ConfigFormatter::format_bool(args.stats)),
         ("👻", "Skip Hidden", formatter::ConfigFormatter::format_bool(args.skip_hidden)),
         ("⚡", "Fast Mode", formatter::ConfigFormatter::format_bool(args.fast_mode)),
+        ("🌳", "Tree", formatter::ConfigFormatter::format_bool(args.tree)),
     ];
 
     for (icon, label, value) in config_items {
+        println!(
+            "{}",
+            formatter::ConfigFormatter::format_config_line(icon, label, value)
+        );
+    }
+
+    // Show ignore file settings
+    println!(
+        "{}",
+        formatter::ConfigFormatter::format_section_header("Ignore File Settings", "🔇")
+    );
+    let ignore_items = vec![
+        ("📝", ".treeclipignore", formatter::ConfigFormatter::format_bool(true)), // Always respected
+        ("🔧", "Respect Ignore Files", formatter::ConfigFormatter::format_bool(true)),
+    ];
+
+    for (icon, label, value) in ignore_items {
         println!(
             "{}",
             formatter::ConfigFormatter::format_config_line(icon, label, value)

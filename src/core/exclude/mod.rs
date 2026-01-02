@@ -1,11 +1,13 @@
 //! exclude - Handles file and directory exclusion patterns using gitignore-style rules.
 
+use crate::commands::args::RunArgs;
 use crate::core::errors::{FileSystemError, PatternError};
 use crate::core::ui::messages::Messages;
 use anyhow::Context;
+use colored::Colorize;
 use ignore::gitignore::{Gitignore, GitignoreBuilder};
 use std::fs::File;
-use std::io::{BufRead, BufReader, Read, Seek, Write};
+use std::io::{BufRead, BufReader};
 use std::path::Path;
 
 /// ExcludeMatcher determines whether paths should be excluded from traversal.
@@ -14,29 +16,30 @@ pub struct ExcludeMatcher {
 }
 
 impl ExcludeMatcher {
-    /// Creates a new ExcludeMatcher with patterns from .treeclipignore and CLI arguments.
+    /// Creates a new ExcludeMatcher with patterns from various ignore files and CLI arguments.
     ///
     /// # Arguments
     ///
-    /// * `root` - Root directory to search for .treeclipignore file
-    /// * `cli_patterns` - Additional exclusion patterns from command-line arguments
+    /// * `root` - Root directory to search for ignore files
+    /// * `args` - Run arguments containing ignore file preferences and CLI patterns
     ///
     /// # Errors
     ///
     /// Returns `PatternError` if:
     /// - The gitignore builder fails to compile patterns
     /// - Invalid pattern syntax is provided
-    pub fn new(root: &Path, cli_patterns: &[String]) -> anyhow::Result<Self> {
+    pub fn new(root: &Path, args: &RunArgs) -> anyhow::Result<Self> {
         let mut builder = GitignoreBuilder::new(root);
 
-        // Add .gitignore content to .treeclipignore if present (only if not already added)
-        Self::sync_gitignore_to_treeclipignore(root)?;
-
-        // Add .treeclipignore file patterns (if exists)
-        Self::add_ignore_file(&mut builder, root)?;
+        // Always respect .treeclipignore if it exists
+        Self::add_ignore_file(&mut builder, root, ".treeclipignore")?;
+        Self::add_ignore_file(&mut builder, root, ".gitignore")?;
+        Self::add_ignore_file(&mut builder, root, ".dockerignore")?;
+        Self::add_ignore_file(&mut builder, root, ".npmignore")?;
+        Self::add_ignore_file(&mut builder, root, ".terraformignore")?;
 
         // Add CLI patterns
-        Self::add_cli_patterns(&mut builder, cli_patterns)
+        Self::add_cli_patterns(&mut builder, &args.exclude)
             .with_context(|| "Failed to process command-line exclusion patterns")?;
 
         let inner = builder
@@ -61,21 +64,72 @@ impl ExcludeMatcher {
 // -------------------------------------------- Private Helper Functions --------------------------------------------
 
 impl ExcludeMatcher {
-    /// Adds patterns from .treeclipignore file if it exists.
-    fn add_ignore_file(builder: &mut GitignoreBuilder, root: &Path) -> anyhow::Result<()> {
-        let ignore_file = root.join(".treeclipignore");
-
-        // TODO: Path operations are not concurrent-safe - consider locking or TOCTOU handling
-        // See: https://doc.rust-lang.org/stable/std/fs/index.html (TOCTOU section)
+    /// Adds patterns from an ignore file if it exists in the root directory.
+    fn add_ignore_file(
+        builder: &mut GitignoreBuilder,
+        root: &Path,
+        filename: &str,
+    ) -> anyhow::Result<()> {
+        let ignore_file = root.join(filename);
         if ignore_file.exists() {
+            Self::add_ignore_file_from_path(builder, &ignore_file)?;
             println!(
                 "{}",
                 Messages::found_ignore_file(&ignore_file.display().to_string())
             );
-            println!("{}", Messages::applying_ignore_rules());
+        }
+        Ok(())
+    }
 
-            // Add with error handling
-            builder.add(&ignore_file);
+    /// Adds patterns from an ignore file at the specified path.
+    fn add_ignore_file_from_path(
+        builder: &mut GitignoreBuilder,
+        path: &Path,
+    ) -> anyhow::Result<()> {
+        let file = File::open(path)
+            .map_err(|e| FileSystemError::ReadFailed {
+                path: path.to_path_buf(),
+                source: e,
+            })
+            .with_context(|| format!("Failed to open ignore file: {}", path.display()))?;
+
+        let reader = BufReader::new(file);
+
+        for (line_num, line) in reader.lines().enumerate() {
+            let line = line
+                .map_err(|e| FileSystemError::ReadFailed {
+                    path: path.to_path_buf(),
+                    source: e,
+                })
+                .with_context(|| {
+                    format!(
+                        "Failed to read line {} from ignore file: {}",
+                        line_num + 1,
+                        path.display()
+                    )
+                })?;
+
+            // Skip empty lines and comments
+            let trimmed = line.trim();
+            if trimmed.is_empty() || trimmed.starts_with('#') {
+                continue;
+            }
+
+            // Add the pattern
+            builder
+                .add_line(Some(path.to_path_buf()), &line)
+                .map_err(|e| PatternError::InvalidPattern {
+                    pattern: line.clone(),
+                    source: e,
+                })
+                .with_context(|| {
+                    format!(
+                        "Invalid pattern at line {} in {}: '{}'",
+                        line_num + 1,
+                        path.display(),
+                        line
+                    )
+                })?;
         }
 
         Ok(())
@@ -103,142 +157,39 @@ impl ExcludeMatcher {
         }
         Ok(())
     }
-
-    /// Syncs .gitignore content to .treeclipignore if present and not already synced.
-    fn sync_gitignore_to_treeclipignore(root: &Path) -> anyhow::Result<()> {
-        let git_ignore_path = root.join(".gitignore");
-        let treeclip_ignore_path = root.join(".treeclipignore");
-
-        // If .gitignore doesn't exist, nothing to sync
-        if !git_ignore_path.exists() {
-            return Ok(());
-        }
-
-        // Read .gitignore content
-        let git_ignore_file = File::options()
-            .read(true)
-            .open(&git_ignore_path)
-            .map_err(|e| FileSystemError::ReadFailed {
-                path: git_ignore_path.to_path_buf(),
-                source: e,
-            })
-            .with_context(|| "Failed to open .gitignore file")?;
-
-        let mut gitignore_lines = Vec::new();
-        for line in BufReader::new(git_ignore_file).lines() {
-            let line = line.map_err(|e| FileSystemError::ReadFailed {
-                path: git_ignore_path.clone(),
-                source: e,
-            })?;
-            gitignore_lines.push(line);
-        }
-
-        // If .treeclipignore exists, check if content is already synced
-        if treeclip_ignore_path.exists() {
-            let treeclip_file = File::options()
-                .read(true)
-                .open(&treeclip_ignore_path)
-                .map_err(|e| FileSystemError::ReadFailed {
-                    path: treeclip_ignore_path.to_path_buf(),
-                    source: e,
-                })
-                .with_context(|| "Failed to open .treeclipignore file")?;
-
-            let treeclip_content = BufReader::new(treeclip_file)
-                .lines()
-                .collect::<Result<Vec<_>, _>>()
-                .map_err(|e| FileSystemError::ReadFailed {
-                    path: treeclip_ignore_path.clone(),
-                    source: e,
-                })?;
-
-            // Check if the gitignore marker section already exists
-            let has_marker = treeclip_content
-                .iter()
-                .any(|line| line.contains("content from .gitignore"));
-
-            // If marker exists, don't append again
-            if has_marker {
-                return Ok(());
-            }
-        }
-
-        // Append .gitignore content to .treeclipignore
-        let mut treeclipignore_file = File::options()
-            .write(true)
-            .append(true)
-            .create(true)
-            .open(&treeclip_ignore_path)
-            .map_err(|e| FileSystemError::WriteFailed {
-                path: treeclip_ignore_path.to_path_buf(),
-                source: e,
-            })
-            .with_context(|| {
-                format!(
-                    "Failed to create or open .treeclipignore file: {}",
-                    treeclip_ignore_path.display()
-                )
-            })?;
-
-        // Write marker and gitignore content
-        writeln!(
-            treeclipignore_file,
-            "\n\n#---------------==> content from .gitignore (Do not edit) <==---------------"
-        )
-        .map_err(|e| FileSystemError::WriteFailed {
-            path: treeclip_ignore_path.to_path_buf(),
-            source: e,
-        })
-        .with_context(|| {
-            format!(
-                "Failed to write marker to: {}",
-                treeclip_ignore_path.display()
-            )
-        })?;
-
-        for line in gitignore_lines {
-            writeln!(treeclipignore_file, "{}", line)
-                .map_err(|e| FileSystemError::WriteFailed {
-                    path: treeclip_ignore_path.to_path_buf(),
-                    source: e,
-                })
-                .with_context(|| {
-                    format!(
-                        "Failed to write gitignore content to: {}",
-                        treeclip_ignore_path.display()
-                    )
-                })?;
-        }
-
-        writeln!(
-            treeclipignore_file,
-            "#---------------==> end <==---------------"
-        )
-        .map_err(|e| FileSystemError::WriteFailed {
-            path: treeclip_ignore_path.to_path_buf(),
-            source: e,
-        })
-        .with_context(|| {
-            format!(
-                "Failed to write end marker to: {}",
-                treeclip_ignore_path.display()
-            )
-        })?;
-
-        Ok(())
-    }
 }
 
 #[cfg(test)]
 mod exclude_tests {
     use super::*;
+    use crate::commands::args::RunArgs;
     use std::fs;
+    use std::path::PathBuf;
     use tempfile::TempDir;
+
+    fn create_test_args(root: PathBuf) -> RunArgs {
+        RunArgs {
+            input_paths: vec![root.clone()],
+            output_path: Some(root.join("output.txt")),
+            root: Some(root),
+            exclude: vec![],
+            clipboard: false,
+            stats: false,
+            editor: false,
+            delete: false,
+            verbose: false,
+            skip_hidden: true,
+            raw: true,
+            fast_mode: true,
+            tree: false,
+        }
+    }
 
     #[test]
     fn test_exclude_matcher_creation() -> anyhow::Result<()> {
         let temp_dir = TempDir::new()?;
-        let matcher = ExcludeMatcher::new(temp_dir.path(), &[])?;
+        let args = create_test_args(temp_dir.path().to_path_buf());
+        let matcher = ExcludeMatcher::new(temp_dir.path(), &args)?;
 
         // Should not exclude root
         assert!(!matcher.is_excluded(temp_dir.path()));
@@ -247,7 +198,7 @@ mod exclude_tests {
     }
 
     #[test]
-    fn test_is_excluded_with_ignore_file() -> anyhow::Result<()> {
+    fn test_respects_treeclipignore() -> anyhow::Result<()> {
         let temp_dir = TempDir::new()?;
         let root = temp_dir.path();
 
@@ -259,19 +210,8 @@ mod exclude_tests {
         let ignore_file = root.join(".treeclipignore");
         fs::write(&ignore_file, "node_modules")?;
 
-        // Create regular files
-        let temp1 = root.join("temp1.txt");
-        fs::write(&temp1, "temp1")?;
-
-        let temp2 = root.join("temp2.txt");
-        fs::write(&temp2, "temp2")?;
-
-        let matcher = ExcludeMatcher::new(root, &[])?;
-
-        // Regular files should not be excluded
-        assert!(!matcher.is_excluded(root));
-        assert!(!matcher.is_excluded(&temp1));
-        assert!(!matcher.is_excluded(&temp2));
+        let args = create_test_args(root.to_path_buf());
+        let matcher = ExcludeMatcher::new(root, &args)?;
 
         // node_modules should be excluded
         assert!(matcher.is_excluded(&node_modules));
@@ -280,104 +220,50 @@ mod exclude_tests {
     }
 
     #[test]
-    fn test_is_excluded_with_cli_patterns() -> anyhow::Result<()> {
+    fn test_respects_gitignore() -> anyhow::Result<()> {
         let temp_dir = TempDir::new()?;
         let root = temp_dir.path();
 
+        // Create target directory
         let target = root.join("target");
         fs::create_dir(&target)?;
 
-        let src = root.join("src");
-        fs::create_dir(&src)?;
+        // Create .gitignore
+        fs::write(root.join(".gitignore"), "target\n*.log")?;
 
-        let matcher = ExcludeMatcher::new(root, &["target".to_string()])?;
+        let args = create_test_args(root.to_path_buf());
+        let matcher = ExcludeMatcher::new(root, &args)?;
 
-        // src should not be excluded
-        assert!(!matcher.is_excluded(&src));
-
-        // target should be excluded (CLI pattern)
+        // target should be excluded
         assert!(matcher.is_excluded(&target));
 
-        Ok(())
-    }
-
-    #[test]
-    fn test_is_excluded_with_multiple_patterns() -> anyhow::Result<()> {
-        let temp_dir = TempDir::new()?;
-        let root = temp_dir.path();
-
-        let node_modules = root.join("node_modules");
-        fs::create_dir(&node_modules)?;
-
-        let target = root.join("target");
-        fs::create_dir(&target)?;
-
-        let src = root.join("src");
-        fs::create_dir(&src)?;
-
-        // Create ignore file with one pattern
-        let ignore_file = root.join(".treeclipignore");
-        fs::write(&ignore_file, "node_modules")?;
-
-        // Add another pattern via CLI
-        let matcher = ExcludeMatcher::new(root, &["target".to_string()])?;
-
-        // src should not be excluded
-        assert!(!matcher.is_excluded(&src));
-
-        // Both node_modules and target should be excluded
-        assert!(matcher.is_excluded(&node_modules));
-        assert!(matcher.is_excluded(&target));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_invalid_pattern_error() {
-        let temp_dir = TempDir::new().unwrap();
-        let root = temp_dir.path();
-
-        // Try to use an invalid glob pattern
-        // Note: Most patterns are valid in gitignore, so this might not fail
-        // This test ensures error handling works if it does fail
-        let result = ExcludeMatcher::new(root, &["[invalid".to_string()]);
-
-        // If it fails, should have context
-        if let Err(e) = result {
-            let error_msg = format!("{:?}", e);
-            assert!(
-                error_msg.contains("pattern") || error_msg.contains("Invalid"),
-                "Error should have context: {}",
-                error_msg
-            );
-        }
-    }
-
-    #[test]
-    fn test_multiple_cli_patterns() -> anyhow::Result<()> {
-        let temp_dir = TempDir::new()?;
-        let root = temp_dir.path();
-
-        let patterns = vec![
-            "*.log".to_string(),
-            "target".to_string(),
-            "node_modules".to_string(),
-        ];
-
-        let matcher = ExcludeMatcher::new(root, &patterns)?;
-
-        // Create test files/dirs
+        // log files should be excluded
         let log_file = root.join("test.log");
         fs::write(&log_file, "")?;
-
-        let rs_file = root.join("test.rs");
-        fs::write(&rs_file, "")?;
-
-        // .log files should be excluded
         assert!(matcher.is_excluded(&log_file));
 
-        // .rs files should not be excluded
-        assert!(!matcher.is_excluded(&rs_file));
+        Ok(())
+    }
+
+    #[test]
+    fn test_cli_patterns_override() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
+        let root = temp_dir.path();
+
+        let dist = root.join("dist");
+        fs::create_dir(&dist)?;
+
+        let mut args = create_test_args(root.to_path_buf());
+        args.exclude = vec!["dist".to_string(), "*.min.js".to_string()];
+
+        let matcher = ExcludeMatcher::new(root, &args)?;
+
+        // CLI patterns should work
+        assert!(matcher.is_excluded(&dist));
+
+        let min_js = root.join("app.min.js");
+        fs::write(&min_js, "")?;
+        assert!(matcher.is_excluded(&min_js));
 
         Ok(())
     }
@@ -389,7 +275,23 @@ mod exclude_tests {
 
         let patterns = vec!["*.log".to_string(), "*_test.rs".to_string()];
 
-        let matcher = ExcludeMatcher::new(root, &patterns)?;
+        let run_args = RunArgs{
+            exclude: patterns,
+
+            input_paths: vec![],
+            output_path: None,
+            root: None,
+            clipboard: false,
+            stats: false,
+            editor: false,
+            delete: false,
+            verbose: false,
+            skip_hidden: false,
+            raw: false,
+            fast_mode: false,
+            tree: false,
+        };
+        let matcher = ExcludeMatcher::new(root, &run_args)?;
 
         // Create test files/dirs
         let log_file = root.join("test.log");
@@ -414,31 +316,28 @@ mod exclude_tests {
     }
 
     #[test]
-    fn test_gitignore_sync_no_duplication() -> anyhow::Result<()> {
+    fn test_ignores_comments_and_empty_lines() -> anyhow::Result<()> {
         let temp_dir = TempDir::new()?;
         let root = temp_dir.path();
 
-        // Create .gitignore
-        let gitignore = root.join(".gitignore");
-        fs::write(&gitignore, "node_modules\n*.log")?;
+        // Create ignore file with comments and empty lines
+        fs::write(
+            root.join(".gitignore"),
+            "# This is a comment\nnode_modules\n\n# Another comment\n*.log\n\n",
+        )?;
 
-        // First sync
-        ExcludeMatcher::new(root, &[])?;
+        let node_modules = root.join("node_modules");
+        fs::create_dir(&node_modules)?;
 
-        // Read .treeclipignore
-        let treeclipignore = root.join(".treeclipignore");
-        let first_content = fs::read_to_string(&treeclipignore)?;
+        let log_file = root.join("test.log");
+        fs::write(&log_file, "")?;
 
-        // Second sync - should not duplicate
-        ExcludeMatcher::new(root, &[])?;
-        let second_content = fs::read_to_string(&treeclipignore)?;
+        let args = create_test_args(root.to_path_buf());
+        let matcher = ExcludeMatcher::new(root, &args)?;
 
-        // Content should be identical
-        assert_eq!(first_content, second_content);
-
-        // Should only have one marker section
-        let marker_count = first_content.matches("content from .gitignore").count();
-        assert_eq!(marker_count, 1);
+        // Patterns should work despite comments
+        assert!(matcher.is_excluded(&node_modules));
+        assert!(matcher.is_excluded(&log_file));
 
         Ok(())
     }

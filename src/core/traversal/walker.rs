@@ -71,13 +71,12 @@ impl Walker {
 impl Walker {
     /// Traverses the directory tree and writes file contents to the output file.
     fn traverse(&self, run_args: &RunArgs) -> anyhow::Result<()> {
-        let matcher = exclude::ExcludeMatcher::new(&self.root, &self.exclude_patterns)
-            .with_context(|| {
-                format!(
-                    "Failed to create exclusion matcher for root: {}",
-                    self.root.display()
-                )
-            })?;
+        let matcher = exclude::ExcludeMatcher::new(&self.root, run_args).with_context(|| {
+            format!(
+                "Failed to create exclusion matcher for root: {}",
+                self.root.display()
+            )
+        })?;
 
         // Track which paths were actually traversed
         let mut traversed_paths: Vec<PathBuf> = Vec::new();
@@ -166,7 +165,13 @@ impl Walker {
                 writeln!(file, "Directory structure:")?;
 
                 let mut tree_state = tree::TreeState::new();
-                tree::TreeState::write_tree_from_paths(&traversed_paths, &self.root, &mut file, &mut tree_state)?;
+                // Build tree only from traversed paths instead of all input paths
+                tree::TreeState::write_tree_from_paths(
+                    &traversed_paths,
+                    &self.root,
+                    &mut file,
+                    &mut tree_state,
+                )?;
             }
         }
 
