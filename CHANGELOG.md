@@ -3,6 +3,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.2.3](https://github.com/seyallius/treeclip.v2/compare/v1.2.2...v1.2.3) - 2026-01-02
+
+### Fixed
+
+- always read common ignore files
+- fix tree traversal scope
+- prevent gitignore duplication
+
 ## [1.2.2](https://github.com/seyallius/treeclip.v2/compare/v1.2.1...v1.2.2) - 2026-01-01
 
 ### Fixed
