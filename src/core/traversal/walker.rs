@@ -79,6 +79,9 @@ impl Walker {
                 )
             })?;
 
+        // Track which paths were actually traversed
+        let mut traversed_paths: Vec<PathBuf> = Vec::new();
+
         // NOTE: Consider parallelizing this traversal for large directories (rayon crate)
         let mut walker = self
             .inputs
@@ -139,6 +142,9 @@ impl Walker {
             if entry_path.is_file() {
                 file_count += 1;
 
+                // Track this file as traversed
+                traversed_paths.push(entry_path.to_path_buf());
+
                 // Progress indicator (only in verbose mode and not fast mode)
                 if run_args.verbose && !run_args.fast_mode && file_count % 5 == 0 {
                     if let Some(msg) = animations::progress_counter(&tree_emojis, file_count, 5) {
@@ -159,8 +165,8 @@ impl Walker {
                 writeln!(file)?;
                 writeln!(file, "Directory structure:")?;
 
-                let mut tree = tree::TreeState::new();
-                tree::TreeState::write_unified_tree(&self.inputs, &mut file, &mut tree)?;
+                let mut tree_state = tree::TreeState::new();
+                tree::TreeState::write_tree_from_paths(&traversed_paths, &self.root, &mut file, &mut tree_state)?;
             }
         }
 
