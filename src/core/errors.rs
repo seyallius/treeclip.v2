@@ -162,7 +162,6 @@
 //! ## Testing Errors
 //!
 //! ```rust
-//! #[test]
 //! fn test_error_handling() -> anyhow::Result<()> {
 //!     let result = risky_operation();
 //!
@@ -295,6 +294,7 @@ use thiserror::Error;
 
 /// Main error type for TreeClip operations.
 #[derive(Error, Debug)]
+#[allow(dead_code)]
 pub enum TreeClipError {
     /// Error related to clipboard operations.
     #[error("Clipboard error: {0}")]
@@ -327,6 +327,7 @@ pub enum TreeClipError {
 
 /// Errors specific to clipboard operations.
 #[derive(Error, Debug)]
+#[allow(dead_code)]
 pub enum ClipboardError {
     #[error("Failed to initialize clipboard: {0}")]
     InitializationFailed(String),
@@ -347,6 +348,7 @@ pub enum ClipboardError {
 
 /// Errors specific to file system operations.
 #[derive(Error, Debug)]
+#[allow(dead_code)]
 pub enum FileSystemError {
     #[error("Path does not exist: {0}")]
     PathNotFound(PathBuf),
@@ -392,6 +394,7 @@ pub enum FileSystemError {
 
 /// Errors specific to directory traversal.
 #[derive(Error, Debug)]
+#[allow(dead_code)]
 pub enum TraversalError {
     #[error("Failed to traverse directory: {path}")]
     WalkFailed {
@@ -416,6 +419,7 @@ pub enum TraversalError {
 
 /// Errors specific to editor operations.
 #[derive(Error, Debug)]
+#[allow(dead_code)]
 pub enum EditorError {
     #[error("Failed to open editor for file: {path}")]
     OpenFailed {
@@ -457,16 +461,6 @@ pub enum PatternError {
         #[source]
         source: ignore::Error,
     },
-}
-
-impl TreeClipError {
-    /// Creates an I/O error with context message.
-    pub fn io_with_context(message: impl Into<String>, source: std::io::Error) -> Self {
-        Self::Io {
-            message: message.into(),
-            source,
-        }
-    }
 }
 
 #[cfg(test)]
@@ -512,13 +506,6 @@ mod errors_tests {
             source: ignore_err,
         };
         assert!(err.to_string().contains("Invalid exclusion pattern"));
-    }
-
-    #[test]
-    fn test_io_error_with_context() {
-        let io_err = io::Error::new(io::ErrorKind::NotFound, "file not found");
-        let err = TreeClipError::io_with_context("Failed to read config", io_err);
-        assert!(err.to_string().contains("Failed to read config"));
     }
 
     #[test]

@@ -57,7 +57,9 @@ impl Messages {
         format!(
             "{} {}",
             "😴".bright_yellow(),
-            "Clipboard nap time - skipping copy".bright_yellow().dimmed()
+            "Clipboard nap time - skipping copy"
+                .bright_yellow()
+                .dimmed()
         )
     }
 
@@ -119,13 +121,6 @@ impl Messages {
         )
     }
 
-    /// Returns the applying ignore rules message.
-    pub fn applying_ignore_rules() -> String {
-        "  📝 Applying rules from .treeclipignore"
-            .bright_black()
-            .to_string()
-    }
-
     pub fn tree_structure_enabled() -> String {
         "Tree structure enabled. See the end of output file for the directory structure."
             .bright_white()
@@ -169,8 +164,6 @@ mod messages_tests {
         let message = Messages::found_ignore_file(path);
         assert!(message.contains(path));
         assert!(!message.is_empty());
-
-        assert!(!Messages::applying_ignore_rules().is_empty());
     }
 
     #[test]

@@ -1,11 +1,8 @@
 //! tree - Handles directory tree rendering operations with support for merged paths.
 
-use rayon::prelude::*;
 use std::collections::{BTreeMap, BTreeSet};
-use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use walkdir::WalkDir;
 
 /// Tracks tree rendering state across directory traversal.
 pub struct TreeState {
@@ -64,74 +61,6 @@ impl TreeState {
 
         // Render the tree
         Self::write_tree_from_map(&tree_map, file, tree)?;
-
-        Ok(())
-    }
-
-    /// Writes a unified tree structure for multiple input paths
-    pub fn write_unified_tree(
-        inputs: &[PathBuf],
-        file: &mut File,
-        tree: &mut TreeState,
-    ) -> anyhow::Result<()> {
-        if inputs.is_empty() {
-            return Ok(());
-        }
-
-        // If single input, use simple approach
-        if inputs.len() == 1 {
-            writeln!(file, "{}", inputs[0].display())?;
-            return Self::write_tree(&inputs[0], file, tree);
-        }
-
-        // Find common ancestor for multiple inputs
-        let common_ancestor = find_common_ancestor(inputs);
-
-        // Build a tree structure from all inputs
-        let tree_map = build_tree_map(inputs, &common_ancestor);
-
-        // Write the common root
-        writeln!(file, "{}", common_ancestor.display())?;
-
-        // Render the merged tree
-        Self::write_tree_from_map(&tree_map, file, tree)?;
-
-        Ok(())
-    }
-
-    pub fn write_tree(dir: &Path, file: &mut File, tree: &mut TreeState) -> anyhow::Result<()> {
-        let mut entries: Vec<_> = WalkDir::new(dir)
-            .max_depth(1)
-            .min_depth(1)
-            .into_iter()
-            .filter_map(Result::ok)
-            .collect();
-
-        entries.sort_by_key(|e| e.path().to_path_buf());
-
-        let mut iter = entries.into_iter().peekable();
-
-        while let Some(entry) = iter.next() {
-            let is_last = iter.peek().is_none();
-            let path = entry.path();
-
-            let prefix = tree.prefix();
-            let connector = if is_last { "└── " } else { "├── " };
-
-            writeln!(
-                file,
-                "{}{}{}",
-                prefix,
-                connector,
-                path.file_name().unwrap().to_string_lossy()
-            )?;
-
-            if path.is_dir() {
-                tree.enter(is_last);
-                Self::write_tree(path, file, tree)?;
-                tree.exit();
-            }
-        }
 
         Ok(())
     }
@@ -219,154 +148,10 @@ fn build_tree_map_from_set(paths: &BTreeSet<PathBuf>) -> BTreeMap<String, TreeNo
     root
 }
 
-/// Finds the common ancestor path for multiple input paths
-fn find_common_ancestor(paths: &[PathBuf]) -> PathBuf {
-    if paths.is_empty() {
-        return PathBuf::from(".");
-    }
-
-    if paths.len() == 1 {
-        return paths[0].clone();
-    }
-
-    // Canonicalize all paths first (or use as-is if canonicalization fails)
-    // Use rayon for parallel processing of paths
-    let canonical_paths: Vec<PathBuf> = paths
-        .par_iter()
-        .map(|p| p.canonicalize().unwrap_or_else(|_| p.clone()))
-        .collect();
-
-    // Split paths into components
-    let components: Vec<Vec<_>> = canonical_paths
-        .par_iter()
-        .map(|p| p.components().collect())
-        .collect();
-
-    if components.is_empty() {
-        return PathBuf::from(".");
-    }
-
-    // Find common prefix
-    let mut common = PathBuf::new();
-    let min_len = components.par_iter().map(|c| c.len()).min().unwrap_or(0);
-
-    for i in 0..min_len {
-        let component = &components[0][i];
-
-        // Check if all paths have the same component at this position
-        if components.par_iter().all(|c| &c[i] == component) {
-            common.push(component);
-        } else {
-            break;
-        }
-    }
-
-    // If no common ancestor found, return "."
-    if common.as_os_str().is_empty() {
-        PathBuf::from(".")
-    } else {
-        common
-    }
-}
-
-/// Builds a tree map structure from input paths relative to common ancestor
-fn build_tree_map(inputs: &[PathBuf], common_ancestor: &Path) -> BTreeMap<String, TreeNode> {
-    // Process each input path in parallel to collect all relative paths
-    let all_relative_paths: Vec<PathBuf> = inputs
-        .par_iter()
-        .flat_map(|input| {
-            // Get path relative to common ancestor
-            let relative = if let Ok(rel) = input.strip_prefix(common_ancestor) {
-                rel.to_path_buf()
-            } else {
-                input.clone()
-            };
-
-            // Walk the directory structure and collect relative paths
-            WalkDir::new(input)
-                .min_depth(1)
-                .into_iter()
-                .filter_map(Result::ok)
-                .filter_map(|entry| {
-                    let entry_path = entry.path();
-
-                    // Get relative path from common ancestor
-                    if let Ok(rel) = entry_path.strip_prefix(common_ancestor) {
-                        Some(rel.to_path_buf())
-                    } else if let Ok(rel) = entry_path.strip_prefix(input) {
-                        Some(relative.join(rel))
-                    } else {
-                        None
-                    }
-                })
-                .collect::<Vec<_>>()
-        })
-        .collect();
-
-    // Now insert all paths into the tree structure sequentially
-    let mut root = BTreeMap::new();
-    for path in all_relative_paths {
-        insert_into_tree(&mut root, &path);
-    }
-
-    root
-}
-
-/// Inserts a path into the tree structure
-fn insert_into_tree(root: &mut BTreeMap<String, TreeNode>, path: &Path) {
-    let components: Vec<_> = path.components().collect();
-
-    if components.is_empty() {
-        return;
-    }
-
-    let mut current = root;
-
-    for component in components {
-        let name = component.as_os_str().to_string_lossy().to_string();
-        current.entry(name).or_insert_with(TreeNode::new);
-
-        let node = current
-            .get_mut(&component.as_os_str().to_string_lossy().to_string())
-            .unwrap();
-        current = &mut node.children;
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::io::BufWriter;
-
-    #[test]
-    fn test_find_common_ancestor_same_parent() {
-        let paths = vec![
-            PathBuf::from("pkg/auth/pipeline/event"),
-            PathBuf::from("pkg/eventhandler"),
-        ];
-
-        let common = find_common_ancestor(&paths);
-        assert_eq!(common, PathBuf::from("pkg"));
-    }
-
-    #[test]
-    fn test_find_common_ancestor_no_common() {
-        let paths = vec![
-            PathBuf::from("/home/user/project"),
-            PathBuf::from("/var/log"),
-        ];
-
-        let common = find_common_ancestor(&paths);
-        // Should find root or a common ancestor
-        assert!(common.components().count() > 0);
-    }
-
-    #[test]
-    fn test_find_common_ancestor_single_path() {
-        let paths = vec![PathBuf::from("src/main.rs")];
-        let common = find_common_ancestor(&paths);
-        assert_eq!(common, PathBuf::from("src/main.rs"));
-    }
 
     #[test]
     fn test_build_tree_map_from_set() {

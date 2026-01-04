@@ -58,12 +58,7 @@ impl Spinner {
             thread::sleep(time::Duration::from_millis(frame_duration));
         }
 
-        println!(
-            "\r{} {} {}",
-            "✓".green(),
-            message.green(),
-            "Done!".dimmed()
-        );
+        println!("\r{} {} {}", "✓".green(), message.green(), "Done!".dimmed());
     }
 }
 
@@ -96,7 +91,7 @@ pub fn animated_dots(text: &str, count: usize, delay_ms: u64) {
 ///
 /// Returns `Some(message)` if counter should be displayed, `None` otherwise.
 pub fn progress_counter(emoji_set: &[&str], current: usize, interval: usize) -> Option<String> {
-    if current % interval == 0 {
+    if current.is_multiple_of(interval) {
         let idx = (current / interval) % emoji_set.len();
         Some(format!(
             "{} Collected {} files so far...",

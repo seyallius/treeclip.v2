@@ -19,22 +19,19 @@ pub struct Walker {
     root: PathBuf,
     inputs: Vec<PathBuf>,
     output: PathBuf,
-    exclude_patterns: Vec<String>,
 }
 
 impl Walker {
     /// Creates a new Walker instance with the specified configuration.
     pub fn new(
         root: &Path,
-        inputs: &Vec<PathBuf>,
+        inputs: &[PathBuf],
         output: &Path,
-        exclude_patterns: &[String],
     ) -> Self {
         Self {
             root: root.to_path_buf(),
-            inputs: inputs.clone(),
+            inputs: inputs.to_owned(),
             output: output.to_path_buf(),
-            exclude_patterns: exclude_patterns.to_owned(),
         }
     }
 
@@ -107,11 +104,10 @@ impl Walker {
         let traversed_paths = file_paths.clone();
 
         // Check if any files were found
-        if file_paths.is_empty() {
-            for input in &self.inputs {
+        if file_paths.is_empty()
+            && let Some(input) = self.inputs.first() {
                 return Err(TraversalError::NoFilesFound(input.to_path_buf()).into());
             }
-        }
 
         // Process files in parallel using rayon
         let file_contents: Vec<anyhow::Result<(PathBuf, String)>> = file_paths
@@ -160,11 +156,10 @@ impl Walker {
             file_count += 1;
 
             // Progress indicator (only in verbose mode and not fast mode)
-            if run_args.verbose && !run_args.fast_mode && file_count % 5 == 0 {
-                if let Some(msg) = animations::progress_counter(&tree_emojis, file_count, 5) {
+            if run_args.verbose && !run_args.fast_mode && file_count % 5 == 0
+                && let Some(msg) = animations::progress_counter(&tree_emojis, file_count, 5) {
                     print!("\r{msg}");
                     stdout().flush().with_context(|| "Failed to flush stdout")?;
-                }
             }
 
             self.write_file_content_with_content(&mut file, &entry_path, &content, &mut first)
@@ -203,81 +198,6 @@ impl Walker {
         Ok(())
     }
 
-    /// Writes a single file's content to the output file with proper formatting.
-    fn write_file_content(
-        &self,
-        output_file: &mut File,
-        entry_path: &Path,
-        first: &mut bool,
-    ) -> anyhow::Result<()> {
-        let relative_path = entry_path.strip_prefix(&self.root).unwrap_or(entry_path);
-
-        if !*first {
-            writeln!(output_file)
-                .map_err(|e| FileSystemError::WriteFailed {
-                    path: self.output.clone(),
-                    source: e,
-                })
-                .with_context(|| {
-                    format!(
-                        "Failed to write newline separator to: {}",
-                        self.output.display()
-                    )
-                })?;
-        }
-
-        // Write the header: ==> relative/path
-        writeln!(output_file, "==> {}", relative_path.display())
-            .map_err(|e| FileSystemError::WriteFailed {
-                path: self.output.clone(),
-                source: e,
-            })
-            .with_context(|| {
-                format!(
-                    "Failed to write path header for: {}",
-                    relative_path.display()
-                )
-            })?;
-
-        // TODO: Switch to buffered streaming (BufReader::read_line or copy) for large files
-        // Read and write content
-        let content = fs::read_to_string(entry_path)
-            .map_err(|e| FileSystemError::ReadFailed {
-                path: entry_path.to_path_buf(),
-                source: e,
-            })
-            .with_context(|| {
-                format!(
-                    "Failed to read file contents from: {}",
-                    entry_path.display()
-                )
-            })?;
-
-        output_file
-            .write_all(content.trim_end().as_bytes())
-            .map_err(|e| FileSystemError::WriteFailed {
-                path: self.output.clone(),
-                source: e,
-            })
-            .with_context(|| {
-                format!(
-                    "Failed to write file content to output: {}",
-                    self.output.display()
-                )
-            })?;
-
-        // Add newline between files
-        writeln!(output_file)
-            .map_err(|e| FileSystemError::WriteFailed {
-                path: self.output.clone(),
-                source: e,
-            })
-            .with_context(|| "Failed to write trailing newline to output file")?;
-
-        *first = false;
-
-        Ok(())
-    }
 
     /// Writes a file's content to the output file with proper formatting, using pre-read content.
     fn write_file_content_with_content(
@@ -358,13 +278,11 @@ mod walker_tests {
             temp_dir.path(),
             &vec![temp_dir.path().to_path_buf()],
             &output,
-            &vec!["node_modules".to_string()],
         );
 
         assert_eq!(walker.root, temp_dir.path());
         // assert_eq!(walker.inputs, temp_dir.path());
         assert_eq!(walker.output, output);
-        assert_eq!(walker.exclude_patterns, vec!["node_modules"]);
     }
 
     #[test]
@@ -380,7 +298,6 @@ mod walker_tests {
             temp_dir.path(),
             &vec![temp_dir.path().to_path_buf()],
             &output,
-            &vec![],
         );
 
         let args = RunArgs {
@@ -425,7 +342,6 @@ mod walker_tests {
             temp_dir.path(),
             &vec![temp_dir.path().to_path_buf()],
             &output_path,
-            &vec![],
         );
 
         let args = RunArgs {
@@ -470,7 +386,6 @@ mod walker_tests {
             temp_dir.path(),
             &vec![PathBuf::from("/nonexistent/path").to_path_buf()],
             &output,
-            &vec![],
         );
 
         let args = RunArgs {
@@ -505,7 +420,7 @@ mod walker_tests {
         let empty_dir = temp_dir.path().join("empty");
         fs::create_dir(&empty_dir)?;
 
-        let walker = Walker::new(temp_dir.path(), &vec![empty_dir.clone()], &output, &vec![]);
+        let walker = Walker::new(temp_dir.path(), &vec![empty_dir.clone()], &output);
 
         let args = RunArgs {
             input_paths: vec![empty_dir.clone()],
@@ -555,7 +470,6 @@ mod walker_tests {
             temp_dir.path(),
             &vec![temp_dir.path().to_path_buf()],
             &output,
-            &exclude_patterns,
         );
         let args = RunArgs {
             input_paths: vec![temp_dir.path().to_path_buf()],

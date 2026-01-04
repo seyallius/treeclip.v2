@@ -4,7 +4,6 @@ use crate::commands::args::RunArgs;
 use crate::core::errors::{FileSystemError, PatternError};
 use crate::core::ui::messages::Messages;
 use anyhow::Context;
-use colored::Colorize;
 use ignore::gitignore::{Gitignore, GitignoreBuilder};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -275,7 +274,7 @@ mod exclude_tests {
 
         let patterns = vec!["*.log".to_string(), "*_test.rs".to_string()];
 
-        let run_args = RunArgs{
+        let run_args = RunArgs {
             exclude: patterns,
 
             input_paths: vec![],

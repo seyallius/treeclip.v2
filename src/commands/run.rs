@@ -86,7 +86,7 @@ fn normalize_paths(args: &mut RunArgs) -> anyhow::Result<()> {
 fn execute_traversal(
     args: &RunArgs,
     root: &Path,
-    inputs: &Vec<PathBuf>,
+    inputs: &[PathBuf],
     output: &Path,
 ) -> anyhow::Result<()> {
     println!("\n{}", messages::Messages::starting_adventure());
@@ -95,7 +95,7 @@ fn execute_traversal(
         animations::animated_dots(&messages::Messages::scanning_files(), 3, 300);
     }
 
-    let walker = walker::Walker::new(root, inputs, output, &args.exclude);
+    let walker = walker::Walker::new(root, inputs, output);
 
     if !args.fast_mode {
         let spinner = animations::Spinner::new_tree();

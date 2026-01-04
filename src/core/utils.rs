@@ -1,7 +1,6 @@
 //! utils - Provides utility functions for path validation and formatting.
 
 use crate::core::errors::FileSystemError;
-use anyhow::Context;
 use std::path::Path;
 
 /// Validates that a path exists on the filesystem.
@@ -34,7 +33,7 @@ pub fn format_number(n: i64) -> String {
 
     let mut result = String::new();
     for (i, char) in s.chars().enumerate() {
-        if i > 0 && ((s.len() - i) % 3 == 0) {
+        if i > 0 && (s.len() - i).is_multiple_of(3) {
             result.push(',');
         }
         result.push(char);
@@ -72,20 +71,6 @@ pub fn format_bytes(bytes: usize) -> String {
     } else {
         format!("{:.1} {}", value, UNITS[exponent])
     }
-}
-
-/// Canonicalizes a path and provides context on failure.
-///
-/// # Errors
-///
-/// Returns `FileSystemError::CanonicalizeFailed` if canonicalization fails.
-pub fn canonicalize_path(path: &Path) -> anyhow::Result<std::path::PathBuf> {
-    path.canonicalize()
-        .map_err(|e| FileSystemError::CanonicalizeFailed {
-            path: path.to_path_buf(),
-            source: e,
-        })
-        .with_context(|| format!("Failed to resolve absolute path for: {}", path.display()))
 }
 
 #[cfg(test)]
@@ -171,25 +156,6 @@ mod utils_tests {
     fn test_format_bytes_decimal_precision() {
         assert_eq!(format_bytes(1_536), "1.5 KB");
         assert_eq!(format_bytes(1_572_864), "1.5 MB");
-    }
-
-    #[test]
-    fn test_canonicalize_path_valid() -> anyhow::Result<()> {
-        let temp_dir = TempDir::new()?;
-        let result = canonicalize_path(temp_dir.path());
-        assert!(result.is_ok());
-        Ok(())
-    }
-
-    #[test]
-    fn test_canonicalize_path_invalid() {
-        let result = canonicalize_path(Path::new("/nonexistent/path"));
-        assert!(result.is_err());
-
-        let error_msg = format!("{:?}", result.unwrap_err());
-        assert!(
-            error_msg.contains("Failed to resolve") || error_msg.contains("CanonicalizeFailed")
-        );
     }
 
     #[test]
