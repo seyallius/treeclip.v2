@@ -18,20 +18,20 @@ impl Messages {
 
     /// Returns the scanning files message.
     pub fn scanning_files() -> String {
-        "🔍 Scanning files".blue().to_string()
+        "🔍 Scanning files".bright_blue().to_string()
     }
 
     // -------------------- Progress Messages --------------------
 
     /// Returns the traversing tree message.
     pub fn traversing_tree() -> String {
-        "Traversing directory tree".to_string()
+        "Traversing directory tree".bright_blue().to_string()
     }
 
     /// Returns the gathering leaves success message.
     pub fn gathering_leaves() -> String {
         "🎉 Successfully gathered all the leaves!"
-            .green()
+            .bright_green()
             .bold()
             .to_string()
     }
@@ -40,15 +40,15 @@ impl Messages {
 
     /// Returns the copying to clipboard message.
     pub fn copying_clipboard() -> String {
-        "Copying to clipboard".to_string()
+        "Copying to clipboard".bright_blue().to_string()
     }
 
     /// Returns the clipboard ready message.
     pub fn clipboard_ready() -> String {
         format!(
             "{} {}",
-            "📋".green(),
-            "Clipboard updated! Ready to paste anywhere~".green()
+            "📋".bright_green(),
+            "Clipboard updated! Ready to paste anywhere~".bright_green()
         )
     }
 
@@ -56,28 +56,28 @@ impl Messages {
     pub fn clipboard_skipped() -> String {
         format!(
             "{} {}",
-            "😴".yellow(),
-            "Clipboard nap time - skipping copy".yellow().dimmed()
+            "😴".bright_yellow(),
+            "Clipboard nap time - skipping copy".bright_yellow().dimmed()
         )
     }
 
     /// Returns the opening editor message.
     pub fn opening_editor() -> String {
         "✏️  Opening your treasure chest..."
-            .blue()
+            .bright_blue()
             .bold()
             .to_string()
     }
 
     /// Returns the editor opened message.
     pub fn editor_opened() -> String {
-        "👀 Hope you like what you see!".blue().to_string()
+        "👀 Hope you like what you see!".bright_blue().to_string()
     }
 
     /// Returns the cleaning up message.
     pub fn cleaning_up() -> String {
         "🗑️  Cleaning up after the party..."
-            .blue()
+            .bright_blue()
             .bold()
             .to_string()
     }
@@ -85,7 +85,7 @@ impl Messages {
     /// Returns the cleaned up message.
     pub fn cleaned_up() -> String {
         "✨ All cleaned up! No traces left behind~"
-            .green()
+            .bright_green()
             .to_string()
     }
 
@@ -101,8 +101,8 @@ impl Messages {
     pub fn ready_to_launch() -> String {
         format!(
             "\n{}\n{}",
-            "🚀 Ready to launch!".green().bold(),
-            "─".repeat(55).green()
+            "🚀 Ready to launch!".bright_green().bold(),
+            "─".repeat(55).bright_green()
         )
     }
 
@@ -112,9 +112,9 @@ impl Messages {
     pub fn found_ignore_file(path: &str) -> String {
         format!(
             "  {} {:<width$} {}",
-            "🔍".cyan(),
+            "🔍".bright_cyan(),
             "Found ignore file:".bold(),
-            path.blue(),
+            path.bright_blue(),
             width = 20
         )
     }
@@ -122,7 +122,7 @@ impl Messages {
     /// Returns the applying ignore rules message.
     pub fn applying_ignore_rules() -> String {
         "  📝 Applying rules from .treeclipignore"
-            .dimmed()
+            .bright_black()
             .to_string()
     }
 

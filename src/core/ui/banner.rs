@@ -77,23 +77,23 @@ const KAOMOJIS: &[&str] = &[
 pub fn print_welcome() {
     let mut rng = rand::rng();
     let banner = &BANNERS[rng.random_range(0..BANNERS.len())];
-    println!("{}", banner.magenta());
+    println!("{}", banner.bright_magenta());
 }
 
 /// Displays a goodbye message with a random kaomoji.
 pub fn print_goodbye() {
-    println!("\n{}", "━".repeat(55).cyan());
+    println!("\n{}", "━".repeat(55).bright_cyan());
 
     let mut rng = rand::rng();
     let message = GOODBYE_MESSAGES[rng.random_range(0..GOODBYE_MESSAGES.len())];
 
-    println!("    {}", message.green().bold());
+    println!("    {}", message.bright_green().bold());
     println!(
         "    {} {}",
         get_random_kaomoji(),
-        "Have a wonderful day!".yellow()
+        "Have a wonderful day!".bright_yellow()
     );
-    println!("{}\n", "━".repeat(55).cyan());
+    println!("{}\n", "━".repeat(55).bright_cyan());
 }
 
 /// Returns a random kaomoji from the collection.

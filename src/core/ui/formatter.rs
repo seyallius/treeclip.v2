@@ -17,8 +17,8 @@ impl ConfigFormatter {
         format!(
             "\n{} {}\n{}",
             icon,
-            title.blue().bold(),
-            "─".repeat(BOX_WIDTH).blue()
+            title.bright_blue().bold(),
+            "─".repeat(BOX_WIDTH).bright_blue()
         )
     }
 
@@ -26,7 +26,7 @@ impl ConfigFormatter {
     pub fn format_config_line(icon: &str, label: &str, value: ColoredString) -> String {
         format!(
             "  {} {:<width$} {}",
-            icon,
+            icon.bright_cyan(),
             label.bright_white(),
             value,
             width = LABEL_WIDTH
@@ -36,23 +36,23 @@ impl ConfigFormatter {
     /// Formats a path with proper coloring based on validity.
     pub fn format_path(path: &Path) -> ColoredString {
         match path.canonicalize() {
-            Ok(p) => p.display().to_string().cyan().bold(),
-            Err(_) => path.display().to_string().yellow(),
+            Ok(p) => p.display().to_string().bright_cyan().bold(),
+            Err(_) => path.display().to_string().bright_yellow(),
         }
     }
 
     /// Formats a boolean value with appropriate symbols and colors.
     pub fn format_bool(val: bool) -> ColoredString {
         if val {
-            "✓ Yes".green().bold()
+            "✓ Yes".bright_green().bold()
         } else {
-            "✗ No".red().dimmed()
+            "✗ No".bright_red().dimmed()
         }
     }
 
     /// Formats a list item with icon and text.
     pub fn format_list_item(icon: &str, text: &str) -> String {
-        format!("  {} {}", icon.dimmed(), text.dimmed())
+        format!("  {} {}", icon.bright_black(), text.bright_black())
     }
 }
 
@@ -108,20 +108,20 @@ impl StatsBox {
         match self.bytes {
             0..=1023 => (
                 "🐣".to_string(),
-                "Tiny but mighty!".yellow().to_string(),
+                "Tiny but mighty!".bright_yellow().to_string(),
             ),
             1024..=102399 => (
                 "🐇".to_string(),
-                "Perfect size! Easy to handle~".green().to_string(),
+                "Perfect size! Easy to handle~".bright_green().to_string(),
             ),
             102400..=1048575 => (
                 "🐘".to_string(),
-                "That's a big one! Impressive~".cyan().to_string(),
+                "That's a big one! Impressive~".bright_cyan().to_string(),
             ),
             _ => (
                 "🐋".to_string(),
                 "Whoa! You've got a whale of content!"
-                    .blue()
+                    .bright_blue()
                     .to_string(),
             ),
         }

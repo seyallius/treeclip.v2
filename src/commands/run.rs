@@ -178,10 +178,10 @@ fn show_stats(output: &Path) -> anyhow::Result<()> {
     let bytes = content.len();
 
     let stats = formatter::StatsBox::new(lines, chars, words, bytes);
-    println!("{}", stats.render().bright_cyan());
+    println!("{}", stats.render());
 
     let (emoji, message) = stats.get_size_message();
-    println!("  {emoji} {message}");
+    println!("  {} {}", emoji.bright_cyan(), message);
 
     Ok(())
 }
@@ -230,6 +230,7 @@ fn log_config(args: &RunArgs) -> anyhow::Result<()> {
     }
 
     // Show ignore file settings
+    println!();
     println!(
         "{}",
         formatter::ConfigFormatter::format_section_header("Ignore File Settings", "🔇")
@@ -247,6 +248,7 @@ fn log_config(args: &RunArgs) -> anyhow::Result<()> {
     }
 
     if !args.exclude.is_empty() {
+        println!();
         println!(
             "{}",
             formatter::ConfigFormatter::format_section_header("Excluded Patterns", "🚫")
@@ -259,6 +261,7 @@ fn log_config(args: &RunArgs) -> anyhow::Result<()> {
         }
     }
 
+    println!();
     println!("{}", messages::Messages::ready_to_launch());
     Ok(())
 }
