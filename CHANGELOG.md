@@ -3,6 +3,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.2.5](https://github.com/seyallius/treeclip.v2/compare/v1.2.4...v1.2.5) - 2026-01-04
+
+### Other
+
+- update README to direct users to published documentation
+- add gitbook docs
+
 ## [1.2.4](https://github.com/seyallius/treeclip.v2/compare/v1.2.3...v1.2.4) - 2026-01-04
 
 ### Other
