@@ -3,6 +3,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.2.4](https://github.com/seyallius/treeclip.v2/compare/v1.2.3...v1.2.4) - 2026-01-04
+
+### Other
+
+- fix all clippy warnings and errors
+- enhance rayon integration for additional parallel processing
+- improve console UI with better color consistency and layout
+
 ## [1.2.3](https://github.com/seyallius/treeclip.v2/compare/v1.2.2...v1.2.3) - 2026-01-02
 
 ### Fixed
