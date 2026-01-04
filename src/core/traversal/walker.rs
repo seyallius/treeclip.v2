@@ -7,6 +7,7 @@ use crate::core::ui::animations;
 use crate::core::{exclude, tree, ui, utils};
 use anyhow::Context;
 use colored::Colorize;
+use rayon::prelude::*;
 use std::fs;
 use std::fs::File;
 use std::io::{stdout, Write};
@@ -78,11 +79,8 @@ impl Walker {
             )
         })?;
 
-        // Track which paths were actually traversed
-        let mut traversed_paths: Vec<PathBuf> = Vec::new();
-
-        // NOTE: Consider parallelizing this traversal for large directories (rayon crate)
-        let mut walker = self
+        // Collect all file paths to process
+        let file_paths: Vec<PathBuf> = self
             .inputs
             .iter()
             .flat_map(|input| {
@@ -93,8 +91,47 @@ impl Walker {
                     !excluded && non_hidden_path
                 })
             })
-            .peekable();
+            .filter_map(|entry| {
+                entry
+                    .map_err(|e| {
+                        eprintln!("Error accessing directory entry: {:?}", e);
+                    })
+                    .ok()
+                    .filter(|e| e.path() != self.output) // Skip reading output itself
+                    .filter(|e| e.path().is_file())
+                    .map(|e| e.path().to_path_buf())
+            })
+            .collect();
 
+        // Track which paths were actually traversed
+        let traversed_paths = file_paths.clone();
+
+        // Check if any files were found
+        if file_paths.is_empty() {
+            for input in &self.inputs {
+                return Err(TraversalError::NoFilesFound(input.to_path_buf()).into());
+            }
+        }
+
+        // Process files in parallel using rayon
+        let file_contents: Vec<anyhow::Result<(PathBuf, String)>> = file_paths
+            .into_par_iter()
+            .map(|path| {
+                // Read file content
+                let content = fs::read_to_string(&path)
+                    .map_err(|e| FileSystemError::ReadFailed {
+                        path: path.clone(),
+                        source: e,
+                    })
+                    .with_context(|| {
+                        format!("Failed to read file contents from: {}", path.display())
+                    })?;
+
+                Ok((path, content))
+            })
+            .collect();
+
+        // Write all contents to output file sequentially to maintain order
         // TODO: Consider using BufWriter for better I/O performance on large outputs
         let mut file = File::options()
             .write(true)
@@ -117,69 +154,40 @@ impl Walker {
 
         let tree_emojis = vec!["🌱", "🌿", "🍃", "🌳", "🌲", "🎄"];
 
-        while let Some(entry) = walker.next() {
-            let entry = entry
-                .map_err(|e| TraversalError::WalkFailed {
-                    path: PathBuf::from(format!("{:?}", self.inputs)), //note: bad! should be the actual path that got into error
-                    source: e,
-                })
-                .with_context(|| {
-                    format!(
-                        "Failed to access directory entry during traversal of: {:?}",
-                        self.inputs.clone()
-                    )
-                })?;
+        // Write the processed content to the output file
+        for result in file_contents {
+            let (entry_path, content) = result?;
+            file_count += 1;
 
-            let is_last = walker.peek().is_none();
-            let entry_path = entry.path();
-
-            // Skip reading output itself
-            if entry_path == self.output {
-                continue;
-            }
-
-            if entry_path.is_file() {
-                file_count += 1;
-
-                // Track this file as traversed
-                traversed_paths.push(entry_path.to_path_buf());
-
-                // Progress indicator (only in verbose mode and not fast mode)
-                if run_args.verbose && !run_args.fast_mode && file_count % 5 == 0 {
-                    if let Some(msg) = animations::progress_counter(&tree_emojis, file_count, 5) {
-                        print!("\r{msg}");
-                        stdout().flush().with_context(|| "Failed to flush stdout")?;
-                    }
+            // Progress indicator (only in verbose mode and not fast mode)
+            if run_args.verbose && !run_args.fast_mode && file_count % 5 == 0 {
+                if let Some(msg) = animations::progress_counter(&tree_emojis, file_count, 5) {
+                    print!("\r{msg}");
+                    stdout().flush().with_context(|| "Failed to flush stdout")?;
                 }
-
-                self.write_file_content(&mut file, entry_path, &mut first)
-                    .with_context(|| {
-                        format!("Failed to write content for file: {}", entry_path.display())
-                    })?;
             }
 
-            if run_args.tree && is_last {
-                println!("\n{}\n", ui::messages::Messages::tree_structure_enabled());
-
-                writeln!(file)?;
-                writeln!(file, "Directory structure:")?;
-
-                let mut tree_state = tree::TreeState::new();
-                // Build tree only from traversed paths instead of all input paths
-                tree::TreeState::write_tree_from_paths(
-                    &traversed_paths,
-                    &self.root,
-                    &mut file,
-                    &mut tree_state,
-                )?;
-            }
+            self.write_file_content_with_content(&mut file, &entry_path, &content, &mut first)
+                .with_context(|| {
+                    format!("Failed to write content for file: {}", entry_path.display())
+                })?;
         }
 
-        // Check if any files were found
-        if file_count == 0 {
-            for input in &self.inputs {
-                return Err(TraversalError::NoFilesFound(input.to_path_buf()).into());
-            }
+        // Add tree structure if requested
+        if run_args.tree {
+            println!("\n{}\n", ui::messages::Messages::tree_structure_enabled());
+
+            writeln!(file)?;
+            writeln!(file, "Directory structure:")?;
+
+            let mut tree_state = tree::TreeState::new();
+            // Build tree only from traversed paths instead of all input paths
+            tree::TreeState::write_tree_from_paths(
+                &traversed_paths,
+                &self.root,
+                &mut file,
+                &mut tree_state,
+            )?;
         }
 
         if run_args.verbose {
@@ -242,6 +250,69 @@ impl Walker {
                 format!(
                     "Failed to read file contents from: {}",
                     entry_path.display()
+                )
+            })?;
+
+        output_file
+            .write_all(content.trim_end().as_bytes())
+            .map_err(|e| FileSystemError::WriteFailed {
+                path: self.output.clone(),
+                source: e,
+            })
+            .with_context(|| {
+                format!(
+                    "Failed to write file content to output: {}",
+                    self.output.display()
+                )
+            })?;
+
+        // Add newline between files
+        writeln!(output_file)
+            .map_err(|e| FileSystemError::WriteFailed {
+                path: self.output.clone(),
+                source: e,
+            })
+            .with_context(|| "Failed to write trailing newline to output file")?;
+
+        *first = false;
+
+        Ok(())
+    }
+
+    /// Writes a file's content to the output file with proper formatting, using pre-read content.
+    fn write_file_content_with_content(
+        &self,
+        output_file: &mut File,
+        entry_path: &Path,
+        content: &str,
+        first: &mut bool,
+    ) -> anyhow::Result<()> {
+        let relative_path = entry_path.strip_prefix(&self.root).unwrap_or(entry_path);
+
+        if !*first {
+            writeln!(output_file)
+                .map_err(|e| FileSystemError::WriteFailed {
+                    path: self.output.clone(),
+                    source: e,
+                })
+                .with_context(|| {
+                    format!(
+                        "Failed to write newline separator to: {}",
+                        self.output.display()
+                    )
+                })?;
+        }
+
+        // Write the header: ==> relative/path
+        writeln!(output_file, "==> {}", relative_path.display())
+            .map_err(|e| FileSystemError::WriteFailed {
+                path: self.output.clone(),
+                source: e,
+            })
+            .with_context(|| {
+                format!(
+                    "Failed to write path header for: {}",
+                    relative_path.display()
                 )
             })?;
 

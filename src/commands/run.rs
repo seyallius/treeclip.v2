@@ -1,6 +1,7 @@
 //! run - Main execution logic for the run command, orchestrating all operations.
 
 use super::args::RunArgs;
+use crate::core::errors::FileSystemError;
 use crate::core::ui::{animations, banner, formatter, messages};
 use crate::core::{clipboard, editor, traversal::walker};
 use anyhow::Context;
@@ -171,7 +172,13 @@ fn handle_editor(args: &RunArgs, output: &Path) -> anyhow::Result<()> {
 fn show_stats(output: &Path) -> anyhow::Result<()> {
     use colored::Colorize;
 
-    let content = fs::read_to_string(output)?;
+    let content = fs::read_to_string(output)
+        .map_err(|e| FileSystemError::ReadFailed {
+            path: output.to_path_buf(),
+            source: e,
+        })
+        .with_context(|| format!("Failed to read file for stats: {}", output.display()))?;
+
     let lines = content.split('\n').count();
     let chars = content.chars().count();
     let words = content.split_whitespace().count();

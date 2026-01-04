@@ -44,6 +44,9 @@ unicode-width = "0.2.2"  # Unicode-aware width calculations
 # Utilities
 rand = "0.9.2"     # Random number generation for UI
 
+# Parallel processing
+rayon = "1.10"    # Parallel processing
+
 [profile.release]
 lto = true               # Link-time optimization for smaller binaries
 codegen-units = 1        # Better optimization at cost of compile time

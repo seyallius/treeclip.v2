@@ -1,5 +1,6 @@
 //! tree - Handles directory tree rendering operations with support for merged paths.
 
+use rayon::prelude::*;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
 use std::io::Write;
@@ -229,14 +230,15 @@ fn find_common_ancestor(paths: &[PathBuf]) -> PathBuf {
     }
 
     // Canonicalize all paths first (or use as-is if canonicalization fails)
+    // Use rayon for parallel processing of paths
     let canonical_paths: Vec<PathBuf> = paths
-        .iter()
+        .par_iter()
         .map(|p| p.canonicalize().unwrap_or_else(|_| p.clone()))
         .collect();
 
     // Split paths into components
     let components: Vec<Vec<_>> = canonical_paths
-        .iter()
+        .par_iter()
         .map(|p| p.components().collect())
         .collect();
 
@@ -246,13 +248,13 @@ fn find_common_ancestor(paths: &[PathBuf]) -> PathBuf {
 
     // Find common prefix
     let mut common = PathBuf::new();
-    let min_len = components.iter().map(|c| c.len()).min().unwrap_or(0);
+    let min_len = components.par_iter().map(|c| c.len()).min().unwrap_or(0);
 
     for i in 0..min_len {
         let component = &components[0][i];
 
         // Check if all paths have the same component at this position
-        if components.iter().all(|c| &c[i] == component) {
+        if components.par_iter().all(|c| &c[i] == component) {
             common.push(component);
         } else {
             break;
@@ -269,36 +271,42 @@ fn find_common_ancestor(paths: &[PathBuf]) -> PathBuf {
 
 /// Builds a tree map structure from input paths relative to common ancestor
 fn build_tree_map(inputs: &[PathBuf], common_ancestor: &Path) -> BTreeMap<String, TreeNode> {
-    let mut root = BTreeMap::new();
-
-    for input in inputs {
-        // Get path relative to common ancestor
-        let relative = if let Ok(rel) = input.strip_prefix(common_ancestor) {
-            rel.to_path_buf()
-        } else {
-            input.clone()
-        };
-
-        // Walk the directory structure
-        for entry in WalkDir::new(input)
-            .min_depth(1)
-            .into_iter()
-            .filter_map(Result::ok)
-        {
-            let entry_path = entry.path();
-
-            // Get relative path from common ancestor
-            let relative_entry = if let Ok(rel) = entry_path.strip_prefix(common_ancestor) {
+    // Process each input path in parallel to collect all relative paths
+    let all_relative_paths: Vec<PathBuf> = inputs
+        .par_iter()
+        .flat_map(|input| {
+            // Get path relative to common ancestor
+            let relative = if let Ok(rel) = input.strip_prefix(common_ancestor) {
                 rel.to_path_buf()
-            } else if let Ok(rel) = entry_path.strip_prefix(input) {
-                relative.join(rel)
             } else {
-                continue;
+                input.clone()
             };
 
-            // Insert into tree structure
-            insert_into_tree(&mut root, &relative_entry);
-        }
+            // Walk the directory structure and collect relative paths
+            WalkDir::new(input)
+                .min_depth(1)
+                .into_iter()
+                .filter_map(Result::ok)
+                .filter_map(|entry| {
+                    let entry_path = entry.path();
+
+                    // Get relative path from common ancestor
+                    if let Ok(rel) = entry_path.strip_prefix(common_ancestor) {
+                        Some(rel.to_path_buf())
+                    } else if let Ok(rel) = entry_path.strip_prefix(input) {
+                        Some(relative.join(rel))
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect();
+
+    // Now insert all paths into the tree structure sequentially
+    let mut root = BTreeMap::new();
+    for path in all_relative_paths {
+        insert_into_tree(&mut root, &path);
     }
 
     root
