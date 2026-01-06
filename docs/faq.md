@@ -68,5 +68,42 @@ GitHub: [https://github.com/seyallius/treeclip.v2](https://github.com/seyallius/
 
 ### Q: Can I contribute to TreeClip?
 
-**A:** Absolutely! Contributions are welcome. Check the repository's `README` or `CONTRIBUTING.md` (if available) for
-guidelines on how to submit bug reports, feature requests, or pull requests.
+**A:** Absolutely! Contributions are welcome.
+
+Found a bug? Have an idea? Want to make it cuter?
+
+1. Fork the repo
+2. Make your changes
+3. Submit a PR with a description
+
+I'm still learning Rust, so if you spot any anti-patterns or improvements, I'm all ears! (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧
+
+### Q: What are overall plans for TreeClip?
+
+**A:** Here is a rough ideas for treeclip that I initially had in mind:
+
+- [ ] Configuration file support (`.treecliprc`)
+- [ ] Interactive mode for selecting files
+- [ ] Multiple output format support (JSON, Markdown, HTML)
+- [ ] Token counting for AI models
+- [x] Smart exclusion patterns (auto-detect `.gitignore`)
+- [ ] Streaming for huge projects
+- [ ] Plugin system for custom processors
+- [x] Multiple inputs
+- [ ] Commands and Options completion
+- [ ] Add don't overwrite output file option
+- [x] Add tree option showing and writing a tree structure of traversed file(s)
+- [x] Optimize performance (use concurrency and parallelism)
+- [ ] Add init option for basic init (.treeclipignore with basic init like .gitignore)
+- [x] Add link to existing ignore file ↑ (done in different way - reads already present ignore files)
+
+But honestly? I built this to learn Rust and solve my immediate problem. If you find it useful, awesome! If you want to
+contribute, even better! ♡
+
+## License
+
+### Q: What is the license for TreeClip? Is it free to use?
+
+**A:** Yes! It's completely free! You can use, modify, distribute it however you want!
+
+Though checkout the [MIT License](../LICENSE) file.

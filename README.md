@@ -64,6 +64,54 @@ Now you can paste the entire project structure into your favorite AI chat! Easy 
 
 For comprehensive documentation, including detailed usage patterns, troubleshooting, and advanced features, please visit our [GitBook documentation](https://me0-42.gitbook.io/treeclip/).
 
+## TODO (Future Plans) 🚧
+
+- [ ] Configuration file support (`.treecliprc`)
+- [ ] Interactive mode for selecting files
+- [ ] Multiple output format support (JSON, Markdown, HTML)
+- [ ] Token counting for AI models
+- [x] Smart exclusion patterns (auto-detect `.gitignore`)
+- [ ] Streaming for huge projects
+- [ ] Plugin system for custom processors
+- [x] Multiple inputs
+- [ ] Commands and Options completion
+- [ ] Add don't overwrite output file option
+- [x] Add tree option showing and writing a tree structure of traversed file(s)
+- [x] Optimize performance (use concurrency and parallelism)
+- [ ] Add init option for basic init (.treeclipignore with basic init like .gitignore)
+- [x] Add link to existing ignore file ↑ (done in different way - reads already present ignore files)
+
+But honestly? I built this to learn Rust and solve my immediate problem. If you find it useful, awesome! If you want to
+contribute, even better! ♡
+
+---
+
+## Contributing
+
+Found a bug? Have an idea? Want to make it cuter?
+
+1. Fork the repo
+2. Make your changes
+3. Submit a PR with a description
+
+I'm still learning Rust, so if you spot any anti-patterns or improvements, I'm all ears! (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧
+
+---
+
+## License
+
+[MIT License](./LICENSE) - feel free to use this however you want!
+
+---
+
+## Credits
+
+Built with:
+
+- Rust 🦀
+- Intention of becoming a rustacean
+- A genuine desire to stop copy-pasting code files
+
 ---
 
 <p align="center">
