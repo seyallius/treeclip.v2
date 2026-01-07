@@ -80,6 +80,7 @@ For comprehensive documentation, including detailed usage patterns, troubleshoot
 - [x] Optimize performance (use concurrency and parallelism)
 - [ ] Add init option for basic init (.treeclipignore with basic init like .gitignore)
 - [x] Add link to existing ignore file ↑ (done in different way - reads already present ignore files)
+- [ ] Make it not depndant to cargo and on new release, also release pre-built binaries for multiple OSes
 
 But honestly? I built this to learn Rust and solve my immediate problem. If you find it useful, awesome! If you want to
 contribute, even better! ♡
