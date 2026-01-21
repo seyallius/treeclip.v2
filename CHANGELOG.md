@@ -3,6 +3,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.3.0](https://github.com/seyallius/treeclip.v2/compare/v1.2.5...v1.3.0) - 2026-01-21
+
+### Added
+
+- add cross-platform binary builds and installers
+
+### Other
+
+- add future plans item
+- update documentation with plans and license
+
 ## [1.2.5](https://github.com/seyallius/treeclip.v2/compare/v1.2.4...v1.2.5) - 2026-01-04
 
 ### Other
