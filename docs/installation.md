@@ -2,22 +2,57 @@
 
 Learn how to install TreeClip on your system.
 
-## Prerequisites
+## Quick Install (All Platforms)
 
-TreeClip is a Rust application. To install it, you need to have [Rust](https://www.rust-lang.org/tools/install)
-installed on your system, which includes the `cargo` package manager.
+You can install TreeClip with a single command:
 
-## Installing from Crates.io (Recommended)
+Unix-like systems (Linux/macOS)
 
-The easiest way to install TreeClip is directly from [crates.io](https://crates.io/crates/treeclip):
+```bash
+curl -fsSL https://raw.githubusercontent.com/seyallius/treeclip.v2/main/install.sh | bash
+
+# Or with custom options
+curl -fsSL https://raw.githubusercontent.com/seyallius/treeclip.v2/main/install.sh | bash -s -- --prefix ~/.local/bin
+```
+
+Windows (PowerShell)
+
+```bash
+iwr -useb https://raw.githubusercontent.com/seyallius/treeclip.v2/main/install.ps1 | iex
+```
+
+## Manual Installation from GitHub Releases
+
+Visit the [GitHub Releases](https://github.com/seyallius/treeclip.v2/releases) page and download the appropriate binary
+for your system:
+
+| Platform              | File                              | Instructions                                                           |
+|-----------------------|-----------------------------------|------------------------------------------------------------------------|
+| Linux (x86_64)        | `treeclip-linux-x86_64.tar.gz`    | `tar xzf treeclip-linux-x86_64.tar.gz && mv treeclip /usr/local/bin/`  |
+| Linux (ARM64)         | `treeclip-linux-aarch64.tar.gz`   | `tar xzf treeclip-linux-aarch64.tar.gz && mv treeclip /usr/local/bin/` |
+| macOS (Intel)         | `treeclip-macos-x86_64.tar.gz`    | `tar xzf treeclip-macos-x86_64.tar.gz && mv treeclip /usr/local/bin/`  |
+| macOS (Apple Silicon) | `treeclip-macos-aarch64.tar.gz`   | `tar xzf treeclip-macos-aarch64.tar.gz && mv treeclip /usr/local/bin/` |
+| Windows               | `treeclip-windows-x86_64.exe.zip` | Unzip and move `treeclip.exe` to your PATH                             |
+
+## Package Managers (Future)
+
+We're working on adding TreeClip to popular package managers:
+
+```bash
+# Coming soon!
+# brew install treeclip           # macOS
+# apt install treeclip            # Ubuntu/Debian
+# yum install treeclip            # RHEL/Fedora
+# choco install treeclip          # Windows (Chocolatey)
+```
+
+## From Crates.io (Rust Developers)
+
+If you have Rust installed, you can still use:
 
 ```bash
 cargo install treeclip
 ```
-
-This command will download the latest version of TreeClip, compile it, and install the `treeclip` binary to your
-system's `$PATH` (typically `~/.cargo/bin` on Unix-like systems). After installation, you can run `treeclip` from any
-terminal.
 
 ## Installing from Source
 
@@ -42,20 +77,3 @@ If you prefer to build TreeClip from the source code, follow these steps:
    crates.io method.
 
    Alternatively, you can build the binary manually:
-
-   ```bash
-   cargo build --release
-   ```
-
-   The compiled binary will be located at `target/release/treeclip`. You can run it directly from there (
-   `./target/release/treeclip --help`) or copy it to a directory in your `$PATH` for global access.
-
-## Verification
-
-To verify the installation, open a new terminal (or source your shell profile if needed) and run:
-
-```bash
-treeclip --version
-```
-
-This should print the version of TreeClip installed on your system.
