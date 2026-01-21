@@ -3,6 +3,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.3.1](https://github.com/seyallius/treeclip.v2/compare/v1.3.0...v1.3.1) - 2026-01-21
+
+### Fixed
+
+- allow building binaries on each push to main (testing)
+- home readme installation update
+
 ## [1.3.0](https://github.com/seyallius/treeclip.v2/compare/v1.2.5...v1.3.0) - 2026-01-21
 
 ### Added
