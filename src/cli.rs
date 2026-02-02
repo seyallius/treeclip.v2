@@ -64,6 +64,8 @@ pub enum Commands {
 TIP: Create a .treeclipignore file (like .gitignore) for permanent exclusions!"
     )]
     Run(args::RunArgs),
+
+    Init(args::InitArgs),
 }
 
 // -------------------------------------------- Private Helper Functions --------------------------------------------
@@ -119,6 +121,7 @@ mod cli_tests {
             Commands::Run(args) => {
                 assert_eq!(args.input_paths, vec![PathBuf::from("test_dir")]);
             }
+            _ => {}
         }
     }
 
@@ -132,6 +135,7 @@ mod cli_tests {
                 assert_eq!(args.input_paths[1], PathBuf::from("dir2"));
                 assert_eq!(args.input_paths[2], PathBuf::from("dir3"));
             }
+            _ => {}
         }
     }
 
@@ -152,6 +156,7 @@ mod cli_tests {
                 assert_eq!(args.exclude, vec!["node_modules", ".git"]);
                 assert_eq!(args.input_paths, vec![PathBuf::from(".")]);
             }
+            _ => {}
         }
     }
 
@@ -172,6 +177,7 @@ mod cli_tests {
                 assert!(args.editor);
                 assert!(args.verbose);
             }
+            _ => {}
         }
     }
 
@@ -183,6 +189,7 @@ mod cli_tests {
             Commands::Run(args) => {
                 assert!(args.fast_mode);
             }
+            _ => {}
         }
     }
 

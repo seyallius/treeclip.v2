@@ -180,7 +180,51 @@ pub struct RunArgs {
     pub tree: bool,
 }
 
+/// Arguments for the init command.
+#[derive(clap::Args, Debug)]
+pub struct InitArgs {
+    /// Target directory where .treeclipignore will be created.
+    ///
+    /// Defaults to current directory if not specified.
+    #[arg(short = 'd', long, default_value = ".")]
+    pub directory: PathBuf,
+
+    /// Force overwrite existing .treeclipignore without prompting.
+    #[arg(short = 'f', long)]
+    pub force: bool,
+}
+
 // -------------------------------------------- Private Helper Functions --------------------------------------------
+
+impl Default for InitArgs {
+    fn default() -> Self {
+        Self {
+            directory: PathBuf::from("."),
+            force: false,
+        }
+    }
+}
+
+impl InitArgs {
+    /// Validates the init arguments.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The specified directory does not exist
+    /// - The directory is not writable
+    pub fn validate(&self) -> anyhow::Result<()> {
+        if !self.directory.exists() {
+            anyhow::bail!("Directory does not exist: {}", self.directory.display());
+        }
+
+        if !self.directory.is_dir() {
+            anyhow::bail!("Path is not a directory: {}", self.directory.display());
+        }
+
+        Ok(())
+    }
+}
 
 /// Validates that a path string is not empty.
 ///
@@ -234,6 +278,7 @@ mod args_tests {
                 assert!(args.skip_hidden);
                 assert!(args.exclude.is_empty());
             }
+            _ => {}
         }
     }
 
@@ -247,6 +292,7 @@ mod args_tests {
                 assert_eq!(args.input_paths[1], PathBuf::from("src"));
                 assert_eq!(args.input_paths[2], PathBuf::from("some/other/input/path"));
             }
+            _ => {}
         }
     }
 
@@ -257,6 +303,7 @@ mod args_tests {
             Commands::Run(args) => {
                 assert!(args.fast_mode);
             }
+            _ => {}
         }
     }
 
@@ -280,6 +327,7 @@ mod args_tests {
                 assert!(args.exclude.contains(&"target".to_string()));
                 assert!(args.exclude.contains(&"*.log".to_string()));
             }
+            _ => {}
         }
     }
 
@@ -298,6 +346,7 @@ mod args_tests {
                 assert!(args.editor);
                 assert!(args.delete);
             }
+            _ => {}
         }
     }
 
@@ -310,6 +359,7 @@ mod args_tests {
                 assert!(args.verbose);
                 assert!(args.fast_mode);
             }
+            _ => {}
         }
     }
 
@@ -321,6 +371,51 @@ mod args_tests {
                 assert!(args.clipboard);
                 assert!(args.stats);
             }
+            _ => {}
         }
+    }
+}
+
+#[cfg(test)]
+mod init_args_tests {
+    use super::*;
+    use std::fs;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_validate_with_valid_directory() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
+        let args = InitArgs {
+            directory: temp_dir.path().to_path_buf(),
+            force: false,
+        };
+
+        assert!(args.validate().is_ok());
+        Ok(())
+    }
+
+    #[test]
+    fn test_validate_with_nonexistent_directory() {
+        let args = InitArgs {
+            directory: PathBuf::from("/nonexistent/directory"),
+            force: false,
+        };
+
+        assert!(args.validate().is_err());
+    }
+
+    #[test]
+    fn test_validate_with_file_instead_of_directory() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
+        let file_path = temp_dir.path().join("file.txt");
+        fs::write(&file_path, "test")?;
+
+        let args = InitArgs {
+            directory: file_path,
+            force: false,
+        };
+
+        assert!(args.validate().is_err());
+        Ok(())
     }
 }

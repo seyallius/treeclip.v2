@@ -1,6 +1,7 @@
 //! messages - Centralized user-facing message definitions for consistent UI.
 
 use colored::Colorize;
+use std::path::Path;
 
 /// Messages provides a centralized location for all user-facing messages.
 pub struct Messages;
@@ -127,11 +128,80 @@ impl Messages {
             .bold()
             .to_string()
     }
+
+    // -------------------- Init Command Messages --------------------
+
+    /// Returns the init starting message.
+    pub fn init_starting() -> String {
+        "🌱 Initializing treeclip configuration..."
+            .bright_green()
+            .bold()
+            .to_string()
+    }
+
+    /// Returns the init success message with the file path.
+    pub fn init_success(path: &Path) -> String {
+        format!(
+            "{} {}",
+            "✅".bright_green(),
+            format!("Successfully created {}", path.display())
+                .bright_green()
+                .bold()
+        )
+    }
+
+    /// Returns the init cancelled message.
+    pub fn init_cancelled() -> String {
+        format!(
+            "{} {}",
+            "🚫".bright_yellow(),
+            "Initialization cancelled. No changes made.".bright_yellow()
+        )
+    }
+
+    /// Returns the init overwriting message.
+    pub fn init_overwriting() -> String {
+        format!(
+            "{} {}",
+            "⚠️".bright_yellow(),
+            "Overwriting existing .treeclipignore...".bright_yellow()
+        )
+    }
+
+    /// Returns the file exists warning message.
+    pub fn init_file_exists_warning() -> String {
+        format!(
+            "{}\n{}",
+            "⚠️  .treeclipignore already exists!".bright_yellow().bold(),
+            "This will overwrite your existing file.".bright_yellow()
+        )
+    }
+
+    /// Returns the importing from message.
+    pub fn init_importing_from(source: &str, count: usize) -> String {
+        format!(
+            "  {} Importing {} patterns from {}",
+            "📥".bright_cyan(),
+            count.to_string().bright_white().bold(),
+            source.bright_blue()
+        )
+    }
+
+    /// Returns the import warning message.
+    pub fn init_import_warning(source: &str, error: &str) -> String {
+        format!(
+            "  {} Failed to import from {}: {}",
+            "⚠️".bright_yellow(),
+            source.bright_blue(),
+            error.dimmed()
+        )
+    }
 }
 
 #[cfg(test)]
 mod messages_tests {
     use super::*;
+    use std::path::PathBuf;
 
     #[test]
     fn test_startup_messages_not_empty() {
@@ -172,5 +242,34 @@ mod messages_tests {
         let message = Messages::found_ignore_file(path);
         assert!(message.contains("Found ignore file:"));
         assert!(message.contains(path));
+    }
+
+    #[test]
+    fn test_init_messages_not_empty() {
+        assert!(!Messages::init_starting().is_empty());
+        assert!(!Messages::init_cancelled().is_empty());
+        assert!(!Messages::init_overwriting().is_empty());
+        assert!(!Messages::init_file_exists_warning().is_empty());
+    }
+
+    #[test]
+    fn test_init_success_contains_path() {
+        let path = PathBuf::from("/test/path/.treeclipignore");
+        let message = Messages::init_success(&path);
+        assert!(message.contains(".treeclipignore"));
+    }
+
+    #[test]
+    fn test_init_importing_from_format() {
+        let message = Messages::init_importing_from(".gitignore", 5);
+        assert!(message.contains(".gitignore"));
+        assert!(message.contains("5"));
+    }
+
+    #[test]
+    fn test_init_import_warning_format() {
+        let message = Messages::init_import_warning(".dockerignore", "File not found");
+        assert!(message.contains(".dockerignore"));
+        assert!(message.contains("File not found"));
     }
 }

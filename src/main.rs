@@ -15,6 +15,7 @@ fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     match cli.command {
         Commands::Run(run_args) => run::execute(run_args)?,
+        Commands::Init(args) => commands::init_handler::handle(args)?,
     }
 
     Ok(())
