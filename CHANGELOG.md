@@ -3,6 +3,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.4.0](https://github.com/seyallius/treeclip.v2/compare/v1.3.0...v1.4.0) - 2026-02-02
+
+### Added
+
+- add init command with smart ignore file management
+
+### Fixed
+
+- change --skip-hidden flag to opt-in, not opt-out
+- allow building binaries on each push to main (testing)
+- home readme installation update
+
+### Other
+
+- update documentation with init command
+
 ## [1.3.0](https://github.com/seyallius/treeclip.v2/compare/v1.2.5...v1.3.0) - 2026-01-21
 
 ### Added
