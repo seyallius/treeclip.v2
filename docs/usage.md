@@ -31,22 +31,21 @@ treeclip run src/ tests/ examples/ -o combined.txt
 
 ### Optional Arguments
 
-| Flag                   | Short | Description                                                                              | Default               |
-|------------------------|-------|------------------------------------------------------------------------------------------|-----------------------|
-| `--output-path <PATH>` | `-o`  | Path to the output file.                                                                 | `./treeclip_temp.txt` |
-| `--root <PATH>`        |       | Root directory for `.treeclipignore` lookup (usually not needed to change).              | `.`                   |
-| `--exclude <PATTERN>`  | `-e`  | Glob patterns to exclude. Can be specified multiple times.                               | None                  |
-| `--clipboard`          | `-c`  | Copy the final output to the system clipboard.                                           | Off                   |
-| `--stats`              |       | Display statistics (lines, words, characters, size) about the extracted content.         | Off                   |
-| `--tree`               | `-t`  | Append the directory structure tree to the end of the output file.                       | Off                   |
-| `--editor`             |       | Open the output file in your system's default editor after creation.                     | Off                   |
-| `--delete`             |       | Delete the output file after closing the editor (requires `--editor`).                   | Off                   |
-| `--verbose`            | `-v`  | Enable verbose output showing detailed progress information.                             | Off                   |
-| `--skip-hidden`        | `-H`  | Skip hidden files and directories (those starting with `.`). This is enabled by default. | **On**                |
-| `--no-skip-hidden`     |       | Include hidden files and directories (disable `--skip-hidden`).                          | Off                   |
-| `--fast-mode`          | `-f`  | Execute quickly without animations or welcome banners. Useful for scripts or CI/CD.      | Off                   |
-| `--help`               | `-h`  | Show help information.                                                                   | -                     |
-| `--version`            | `-V`  | Show the version number.                                                                 | -                     |
+| Flag                   | Short | Description                                                                                                                                                                               | Default               |
+|------------------------|-------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------|
+| `--output-path <PATH>` | `-o`  | Path to the output file.                                                                                                                                                                  | `./treeclip_temp.txt` |
+| `--root <PATH>`        |       | Root directory for `.treeclipignore` lookup (usually not needed to change).                                                                                                               | `.`                   |
+| `--exclude <PATTERN>`  | `-e`  | Glob patterns to exclude. Can be specified multiple times.                                                                                                                                | None                  |
+| `--clipboard`          | `-c`  | Copy the final output to the system clipboard.                                                                                                                                            | Off                   |
+| `--stats`              |       | Display statistics (lines, words, characters, size) about the extracted content.                                                                                                          | Off                   |
+| `--tree`               | `-t`  | Append the directory structure tree to the end of the output file.                                                                                                                        | Off                   |
+| `--editor`             |       | Open the output file in your system's default editor after creation.                                                                                                                      | Off                   |
+| `--delete`             |       | Delete the output file after closing the editor (requires `--editor`).                                                                                                                    | Off                   |
+| `--verbose`            | `-v`  | Enable verbose output showing detailed progress information.                                                                                                                              | Off                   |
+| `--skip-hidden`        | `-H`  | Skip hidden files and directories (those starting with "."). <br/>This is disabled by default. Using --skip-hidden enables this behavior and excludes these hidden items from the bundle. | **On**                |
+| `--fast-mode`          | `-f`  | Execute quickly without animations or welcome banners. Useful for scripts or CI/CD.                                                                                                       | Off                   |
+| `--help`               | `-h`  | Show help information.                                                                                                                                                                    | -                     |
+| `--version`            | `-V`  | Show the version number.                                                                                                                                                                  | -                     |
 
 ## `init`
 

@@ -44,8 +44,6 @@ This section addresses common issues and errors you might encounter while using 
 - Check if the directory actually contains readable files.
 - Review your `.treeclipignore` file or `-e` exclusion patterns. They might be too broad and excluding all intended
   files.
-- If using `--skip-hidden` (the default), ensure the files you want are not hidden (starting with `.`). Use
-  `--no-skip-hidden` if needed.
 
 ### 5. Shell Glob Pattern Issues
 

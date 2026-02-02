@@ -24,12 +24,6 @@ explicitly targeted and readable as text.
 
 ## Usage
 
-### Q: What's the difference between `--skip-hidden` and `--no-skip-hidden`?
-
-**A:** By default, TreeClip uses `--skip-hidden`, which means it will skip files and directories whose names start with
-a dot (e.g., `.git`, `.env`, `.vscode`). Using `--no-skip-hidden` disables this behavior and includes these hidden items
-in the bundle.
-
 ### Q: How does the `.treeclipignore` file work?
 
 **A:** The `.treeclipignore` file works similarly to `.gitignore`. It contains patterns for files and directories that

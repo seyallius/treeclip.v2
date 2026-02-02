@@ -23,11 +23,7 @@ pub struct Walker {
 
 impl Walker {
     /// Creates a new Walker instance with the specified configuration.
-    pub fn new(
-        root: &Path,
-        inputs: &[PathBuf],
-        output: &Path,
-    ) -> Self {
+    pub fn new(root: &Path, inputs: &[PathBuf], output: &Path) -> Self {
         Self {
             root: root.to_path_buf(),
             inputs: inputs.to_owned(),
@@ -82,10 +78,16 @@ impl Walker {
             .iter()
             .flat_map(|input| {
                 WalkDir::new(input).into_iter().filter_entry(|entry| {
-                    let excluded = matcher.is_excluded(entry.path());
-                    let non_hidden_path =
-                        !run_args.skip_hidden || !filter::is_hidden(entry, run_args.verbose);
-                    !excluded && non_hidden_path
+                    let excluded_by_ignore_rules = matcher.is_excluded(entry.path()); // Check ignore files first
+                    let skip_hidden_flag_active = run_args.skip_hidden; // Check the flag
+                    let is_current_entry_hidden = filter::is_hidden(entry, run_args.verbose); // Check if hidden
+
+                    // Include the entry if:
+                    // 1. It's NOT excluded by ignore rules (e.g., .treeclipignore, .gitignore)
+                    // AND
+                    // 2. Either the --skip-hidden flag is OFF, OR the entry is NOT hidden
+                    !excluded_by_ignore_rules
+                        && (!skip_hidden_flag_active || !is_current_entry_hidden)
                 })
             })
             .filter_map(|entry| {
@@ -105,9 +107,10 @@ impl Walker {
 
         // Check if any files were found
         if file_paths.is_empty()
-            && let Some(input) = self.inputs.first() {
-                return Err(TraversalError::NoFilesFound(input.to_path_buf()).into());
-            }
+            && let Some(input) = self.inputs.first()
+        {
+            return Err(TraversalError::NoFilesFound(input.to_path_buf()).into());
+        }
 
         // Process files in parallel using rayon
         let file_contents: Vec<anyhow::Result<(PathBuf, String)>> = file_paths
@@ -156,10 +159,13 @@ impl Walker {
             file_count += 1;
 
             // Progress indicator (only in verbose mode and not fast mode)
-            if run_args.verbose && !run_args.fast_mode && file_count % 5 == 0
-                && let Some(msg) = animations::progress_counter(&tree_emojis, file_count, 5) {
-                    print!("\r{msg}");
-                    stdout().flush().with_context(|| "Failed to flush stdout")?;
+            if run_args.verbose
+                && !run_args.fast_mode
+                && file_count % 5 == 0
+                && let Some(msg) = animations::progress_counter(&tree_emojis, file_count, 5)
+            {
+                print!("\r{msg}");
+                stdout().flush().with_context(|| "Failed to flush stdout")?;
             }
 
             self.write_file_content_with_content(&mut file, &entry_path, &content, &mut first)
@@ -197,7 +203,6 @@ impl Walker {
 
         Ok(())
     }
-
 
     /// Writes a file's content to the output file with proper formatting, using pre-read content.
     fn write_file_content_with_content(

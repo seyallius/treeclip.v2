@@ -145,7 +145,10 @@ pub struct RunArgs {
     ///   • .env
     ///   • .DS_Store
     ///   • .vscode/
-    #[arg(short = 'H', long, default_value_t = true, verbatim_doc_comment)]
+    ///
+    /// Note: Files listed in .treeclipignore or .gitignore are
+    /// still excluded regardless of this flag.
+    #[arg(short = 'H', long, default_value_t = false, verbatim_doc_comment)]
     pub skip_hidden: bool,
 
     /// Extract raw content without additional metadata
@@ -275,7 +278,7 @@ mod args_tests {
                 assert!(!args.delete);
                 assert!(!args.verbose);
                 assert!(!args.fast_mode);
-                assert!(args.skip_hidden);
+                assert!(!args.skip_hidden);
                 assert!(args.exclude.is_empty());
             }
             _ => {}
