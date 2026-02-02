@@ -15,6 +15,19 @@ individual files, TreeClip:
 This single file preserves the project's structure and context, making it easy for AI models to understand and analyze
 your code.
 
+## Setting Up Exclusions (Optional but Recommended)
+
+Before bundling a large project, it's often helpful to define which files TreeClip should ignore (like build outputs,
+dependencies, sensitive files). You can create a `.treeclipignore` file manually, or use the `init` command to generate
+a default one:
+
+```bash
+# Generate a default .treeclipignore in the current directory
+treeclip init
+```
+
+This command creates a `.treeclipignore` file with common patterns and imports rules from existing `.gitignore` files if found.
+
 ## Your First Command
 
 The most common and useful command is to bundle the current directory and copy it to your clipboard:
@@ -27,7 +40,7 @@ This command does the following:
 
 - Scans the current directory (`.`).
 - Creates a temporary output file (usually `treeclip_temp.txt`).
-- Reads all files and writes them to the output file with headers.
+- Reads all files (respecting `.treeclipignore` rules) and writes them to the output file with headers.
 - Copies the entire content of the output file to your system clipboard.
 - Shows a welcome banner and progress animation (unless `--fast-mode` is used).
 
@@ -57,5 +70,3 @@ for both humans and AI to identify where each piece of code comes from.
 - Learn how to [install](./installation.md) TreeClip.
 - Explore the full range of [commands and options](./usage.md).
 - Check out [examples](./examples/) for specific use cases.
-
-```

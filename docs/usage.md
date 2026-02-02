@@ -48,6 +48,46 @@ treeclip run src/ tests/ examples/ -o combined.txt
 | `--help`               | `-h`  | Show help information.                                                                   | -                     |
 | `--version`            | `-V`  | Show the version number.                                                                 | -                     |
 
+## `init`
+
+The `init` command creates a default `.treeclipignore` file in the specified directory.
+
+```bash
+treeclip init [OPTIONS]
+```
+
+### Optional Arguments
+
+| Flag                 | Short | Description                                                              | Default           |
+|----------------------|-------|--------------------------------------------------------------------------|-------------------|
+| `--directory <PATH>` | `-d`  | Target directory where `.treeclipignore` will be created.                | `.` (current dir) |
+| `--force`            | `-f`  | Overwrite existing `.treeclipignore` without prompting for confirmation. | Off               |
+
+#### Examples of Init Command
+
+```bash
+# Create .treeclipignore in the current directory
+treeclip init
+
+# Create .treeclipignore in a specific directory
+treeclip init -d /path/to/project
+
+# Force overwrite without confirmation
+treeclip init --force
+
+# Create .treeclipignore in a specific directory and force overwrite
+treeclip init -d /path/to/project --force
+```
+
+### Init Command Behavior
+
+1. **Location:** Creates a `.treeclipignore` file in the specified directory (or current directory if none specified).
+2. **Content:** The generated file includes default patterns (like `target/`, `node_modules/`, etc.) and imports
+   patterns from existing standard ignore files (`.gitignore`, `.dockerignore`, etc.) found in the target directory.
+3. **Duplicates:** Automatically avoids adding duplicate patterns from different sources.
+4. **Confirmation:** Asks for confirmation before overwriting an existing `.treeclipignore` file unless `--force` is
+   used.
+
 ## Common Usage Patterns
 
 Here are some common and useful commands:
@@ -65,6 +105,7 @@ Here are some common and useful commands:
 | **Just Save to File**                  | `treeclip run ./src -o output.txt --fast-mode`                                                                        | Saves content to a file quickly without extra features.                                                     |
 | **Verbose Progress Tracking**          | `treeclip run --verbose --clipboard`                                                                                  | Shows detailed progress information during execution.                                                       |
 | **Multiple Directories**               | `treeclip run ./src ./tests ./examples -o combined.txt`                                                               | Combines files from multiple directories into a single output file.                                         |
+| **Initialize Ignore File**             | `treeclip init`                                                                                                       | Creates a default `.treeclipignore` file in the current directory.                                          |
 
 ## Using `.treeclipignore`
 

@@ -67,8 +67,20 @@ This section addresses common issues and errors you might encounter while using 
   `export EDITOR=vim`).
 - Check the output of the command for any specific error messages related to opening the editor.
 
+### 7. Init Command Fails
+
+**Problem:** The `treeclip init` command fails.
+
+**Solution:**
+
+- **Directory Does Not Exist:** Ensure the directory specified with `-d` exists and is accessible.
+- **Not a Directory:** The path specified with `-d` must point to a directory, not a file.
+- **Permission Denied:** Make sure you have write permissions in the target directory.
+- **Overwrite Confirmation:** If `.treeclipignore` already exists, `treeclip init` will ask for confirmation before
+  overwriting it, unless the `--force` flag is used.
+
 ## Getting More Help
 
-- Run `treeclip --help` or `treeclip run --help` for detailed command-line option information.
+- Run `treeclip --help` or `treeclip run --help` or `treeclip init --help` for detailed command-line option information.
 - Check the [Usage](./usage.md) page for comprehensive command details.
 - If you suspect a bug, please report it on the [GitHub repository](https://github.com/seyallius/treeclip.v2/issues).
