@@ -3,6 +3,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.4.4](https://github.com/seyallius/treeclip.v2/compare/v1.4.3...v1.4.4) - 2026-02-03
+
+### Fixed
+
+- create release with PAT instead of GITHUB_TOKEN
+
 ## [1.4.3](https://github.com/seyallius/treeclip.v2/compare/v1.4.2...v1.4.3) - 2026-02-03
 
 ### Fixed
