@@ -90,7 +90,7 @@ jobs:
   build-binaries:
     name: Build binaries for ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
-    #    needs: release-plz-release
+    needs: release-plz-release
     if: ${{ github.repository_owner == 'seyallius' }}
     strategy:
       matrix:
