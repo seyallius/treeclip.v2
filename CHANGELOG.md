@@ -3,6 +3,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.4.2](https://github.com/seyallius/treeclip.v2/compare/v1.4.1...v1.4.2) - 2026-02-03
+
+### Fixed
+
+- avoid build-binaries and create-release trigger on push
+
 ## [1.4.1](https://github.com/seyallius/treeclip.v2/compare/v1.4.0...v1.4.1) - 2026-02-03
 
 ### Fixed
