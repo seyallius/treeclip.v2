@@ -90,7 +90,7 @@ jobs:
   build-binaries:
     name: Build binaries for ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
-    needs: release-plz-release
+    #    needs: release-plz-release
     if: ${{ github.repository_owner == 'seyallius' }}
     strategy:
       matrix:
@@ -98,18 +98,17 @@ jobs:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
             artifact_name: treeclip-linux-x86_64
+            mandatory: true
+
           - target: x86_64-pc-windows-msvc
             os: windows-latest
             artifact_name: treeclip-windows-x86_64.exe
+            mandatory: true
+
           - target: x86_64-apple-darwin
             os: macos-latest
             artifact_name: treeclip-macos-x86_64
-          - target: aarch64-unknown-linux-gnu
-            os: ubuntu-latest
-            artifact_name: treeclip-linux-aarch64
-          - target: aarch64-apple-darwin
-            os: macos-latest
-            artifact_name: treeclip-macos-aarch64
+            mandatory: false
 
     steps:
       - name: Checkout repository
@@ -120,44 +119,49 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
+          toolchain: stable
           targets: ${{ matrix.target }}
 
       - name: Install cross-compilation dependencies (Linux)
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest' && (matrix.target == 'aarch64-unknown-linux-gnu')
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu
-          rustup target add ${{ matrix.target }}
+
+      - name: Configure cross-compilation for aarch64-unknown-linux-gnu
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          mkdir -p .cargo
+          cat > .cargo/config.toml << EOF
+          [target.aarch64-unknown-linux-gnu]
+          linker = "aarch64-linux-gnu-gcc"
+          EOF
 
       - name: Build release binary
         run: |
           cargo build --release --target ${{ matrix.target }}
-          # Strip debug symbols to reduce binary size (optional but recommended)
-          if command -v strip &> /dev/null; then
-            strip "target/${{ matrix.target }}/release/treeclip" 2>/dev/null || true
-          fi
 
-      - name: Prepare artifact
+      - name: Prepare Artifact
         shell: bash
         run: |
           BINARY_PATH="target/${{ matrix.target }}/release/treeclip"
-          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+          if [[ "${{ matrix.target }}" == *"pc-windows"* ]]; then
             BINARY_PATH="${BINARY_PATH}.exe"
           fi
-          
+
           # Create archive
-          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+          if [[ "${{ matrix.target }}" == *"pc-windows"* ]]; then
             7z a "${{ matrix.artifact_name }}.zip" "$BINARY_PATH"
           else
             tar czf "${{ matrix.artifact_name }}.tar.gz" -C "$(dirname "$BINARY_PATH")" "$(basename "$BINARY_PATH")"
           fi
 
-      - name: Upload release artifact
+      - name: Upload Release Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
           path: ${{ matrix.artifact_name }}.*
-          if-no-files-found: error        
+          if-no-files-found: error
 
   create-release:
     name: Create GitHub Release
