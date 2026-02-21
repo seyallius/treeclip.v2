@@ -3,6 +3,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.4.5](https://github.com/seyallius/treeclip.v2/compare/v1.4.4...v1.4.5) - 2026-02-21
+
+### Other
+
+- Initial Plan: Dioxus
+
 ## [1.4.4](https://github.com/seyallius/treeclip.v2/compare/v1.4.3...v1.4.4) - 2026-02-03
 
 ### Fixed
