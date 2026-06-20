@@ -461,6 +461,18 @@ pub enum PatternError {
         #[source]
         source: ignore::Error,
     },
+
+    /// Returned when a glob input pattern is not valid glob syntax.
+    #[error("Failed to build glob matcher for pattern: {pattern}")]
+    GlobBuildFailed {
+        pattern: String,
+        #[source]
+        source: ignore::Error,
+    },
+
+    /// Returned when a glob input pattern matches zero paths on disk.
+    #[error("Glob pattern matched no files: {pattern}")]
+    GlobNoMatches { pattern: String },
 }
 
 #[cfg(test)]
@@ -506,6 +518,29 @@ mod errors_tests {
             source: ignore_err,
         };
         assert!(err.to_string().contains("Invalid exclusion pattern"));
+    }
+
+    #[test]
+    fn test_glob_no_matches_error_display() {
+        let err = PatternError::GlobNoMatches {
+            pattern: "object/*.go".to_string(),
+        };
+        assert!(err.to_string().contains("matched no files"));
+        assert!(err.to_string().contains("object/*.go"));
+    }
+
+    #[test]
+    fn test_glob_build_failed_error_display() {
+        let pattern = "[invalid";
+        let ignore_err = ignore::Error::Glob {
+            glob: Some(pattern.to_string()),
+            err: "unclosed character class".to_string(),
+        };
+        let err = PatternError::GlobBuildFailed {
+            pattern: pattern.to_string(),
+            source: ignore_err,
+        };
+        assert!(err.to_string().contains("Failed to build glob matcher"));
     }
 
     #[test]

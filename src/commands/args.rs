@@ -12,11 +12,19 @@ pub struct RunArgs {
     /// Use '.' for current directory or provide any valid paths.
     /// Multiple paths can be specified.
     ///
+    /// Glob patterns are supported and expanded shell-independently
+    /// using git-style matching (the same engine behind .gitignore),
+    /// so they work identically whether or not your shell already
+    /// expanded them - handy on Windows or when quoted on Unix.
+    ///
     /// Examples:
     ///   treeclip run .
     ///   treeclip run ./src
     ///   treeclip run ~/projects/my-app
     ///   treeclip run . src some/other/input/path
+    ///   treeclip run object/*
+    ///   treeclip run "object*"
+    ///   treeclip run "object/*.go"
     #[arg(
         default_value = ".",
         value_parser = validate_path,
@@ -422,3 +430,4 @@ mod init_args_tests {
         Ok(())
     }
 }
+

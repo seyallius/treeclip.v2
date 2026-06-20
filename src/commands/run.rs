@@ -3,7 +3,7 @@
 use super::args::RunArgs;
 use crate::core::errors::FileSystemError;
 use crate::core::ui::{animations, banner, formatter, messages};
-use crate::core::{clipboard, editor, traversal::walker};
+use crate::core::{clipboard, editor, glob, traversal::walker};
 use anyhow::Context;
 use std::path::{Path, PathBuf};
 use std::{env, fs};
@@ -52,7 +52,22 @@ pub fn execute(mut args: RunArgs) -> anyhow::Result<()> {
 // -------------------------------------------- Private Helper Functions --------------------------------------------
 
 /// Normalizes all path arguments to absolute paths.
+///
+/// Glob patterns in `input_paths` (e.g. `object/*`, `object*`, `object/*.go`)
+/// are expanded into their concrete matches first, shell-independently and
+/// using git-style glob semantics - so the same command behaves identically
+/// whether the shell already expanded the glob or not.
 fn normalize_paths(args: &mut RunArgs) -> anyhow::Result<()> {
+    // Expand any glob-pattern input paths into concrete matches first.
+    let raw_inputs: Vec<String> = args
+        .input_paths
+        .iter()
+        .map(|p| p.to_string_lossy().to_string())
+        .collect();
+    let expanded_inputs =
+        glob::expand_inputs(&raw_inputs).with_context(|| "Failed to expand glob input paths")?;
+    args.input_paths = expanded_inputs;
+
     // Normalize input paths
     let mut normalized_input_paths = Vec::new();
     for input_path in &args.input_paths {
@@ -315,6 +330,77 @@ mod run_tests {
         // This should not panic
         let result = show_stats(&output_path);
         assert!(result.is_ok());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_normalize_paths_expands_glob_input() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
+        let object_dir = temp_dir.path().join("object");
+        fs::create_dir(&object_dir)?;
+        fs::write(object_dir.join("a.go"), "package main")?;
+        fs::write(object_dir.join("b.go"), "package main")?;
+        fs::write(object_dir.join("c.txt"), "not go")?;
+
+        let original_dir = env::current_dir()?;
+        env::set_current_dir(temp_dir.path())?;
+
+        let mut args = RunArgs {
+            input_paths: vec![PathBuf::from("object/*.go")],
+            output_path: Some(PathBuf::from(".")),
+            root: Some(PathBuf::from(".")),
+            exclude: vec![],
+            clipboard: false,
+            stats: false,
+            editor: false,
+            delete: false,
+            verbose: false,
+            skip_hidden: true,
+            raw: true,
+            fast_mode: false,
+            tree: false,
+        };
+
+        let result = normalize_paths(&mut args);
+
+        env::set_current_dir(original_dir)?;
+
+        result?;
+        assert_eq!(args.input_paths.len(), 2);
+        assert!(args.input_paths.iter().all(|p| p.extension().unwrap() == "go"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_normalize_paths_glob_with_no_matches_errors() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
+
+        let original_dir = env::current_dir()?;
+        env::set_current_dir(temp_dir.path())?;
+
+        let mut args = RunArgs {
+            input_paths: vec![PathBuf::from("nonexistent/*.go")],
+            output_path: Some(PathBuf::from(".")),
+            root: Some(PathBuf::from(".")),
+            exclude: vec![],
+            clipboard: false,
+            stats: false,
+            editor: false,
+            delete: false,
+            verbose: false,
+            skip_hidden: true,
+            raw: true,
+            fast_mode: false,
+            tree: false,
+        };
+
+        let result = normalize_paths(&mut args);
+
+        env::set_current_dir(original_dir)?;
+
+        assert!(result.is_err());
 
         Ok(())
     }

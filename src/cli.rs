@@ -60,6 +60,7 @@ pub enum Commands {
     treeclip run --clipboard              # Also copy to clipboard
     treeclip run ./src -o bundle.txt      # Custom input and output
     treeclip run -e node_modules -e .git  # Exclude patterns
+    treeclip run \"src/**/*.go\"            # Glob input (git-style, shell-independent)
 
 TIP: Create a .treeclipignore file (like .gitignore) for permanent exclusions!"
     )]
@@ -134,6 +135,19 @@ mod cli_tests {
                 assert_eq!(args.input_paths[0], PathBuf::from("dir1"));
                 assert_eq!(args.input_paths[1], PathBuf::from("dir2"));
                 assert_eq!(args.input_paths[2], PathBuf::from("dir3"));
+            }
+            _ => {}
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_glob_input_path() {
+        // Glob strings must parse through clap untouched; expansion happens
+        // later in run::normalize_paths, not at the CLI parsing layer.
+        let cli = Cli::parse_from(&["treeclip", "run", "object/*.go"]);
+        match cli.command {
+            Commands::Run(args) => {
+                assert_eq!(args.input_paths, vec![PathBuf::from("object/*.go")]);
             }
             _ => {}
         }
@@ -216,3 +230,4 @@ mod cli_tests {
         let _ = result;
     }
 }
+
