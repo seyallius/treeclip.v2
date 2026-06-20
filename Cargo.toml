@@ -32,8 +32,6 @@ clap = { version = "4.5.53", features = ["derive", "color", "usage", "help", "er
 # File system operations
 walkdir = "2.5.0"        # Directory traversal
 ignore = "0.4.25"       # Gitignore-style pattern matching
-rfd = "0.17.2" # Rust File Dialog for picking directories
-directories = "6.0.0" # To save user preferences (like starred projects)
 
 # System integrations
 arboard = "3.6.1"        # Cross-platform clipboard
@@ -42,15 +40,12 @@ tempfile = "3.23.0"     # Temporary file handling
 # UI and formatting
 colored = "3.0.0"        # Terminal colors
 unicode-width = "0.2.2"  # Unicode-aware width calculations
-dioxus = { version = "0.7.3", features = ["desktop"] }
-dioxus-desktop = "0.7.3"
 
 # Utilities
-rand = "0.10.0"     # Random number generation for UI
+rand = "0.9.2"     # Random number generation for UI
 
 # Parallel processing
 rayon = "1.10"    # Parallel processing
-tokio = { version = "1.49.0", features = ["full"] }
 
 [profile.release]
 lto = true               # Link-time optimization for smaller binaries
