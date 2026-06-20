@@ -156,8 +156,27 @@ pub struct RunArgs {
     ///
     /// Note: Files listed in .treeclipignore or .gitignore are
     /// still excluded regardless of this flag.
-    #[arg(short = 'H', long, default_value_t = false, verbatim_doc_comment)]
+    #[arg(
+        short = 'H',
+        long = "skip-hidden",
+        default_value_t = true,
+        action = ArgAction::SetTrue,
+        overrides_with("no_skip_hidden"),
+        verbatim_doc_comment
+    )]
     pub skip_hidden: bool,
+
+    /// Include hidden files and folders (negates --skip-hidden)
+    ///
+    /// This is a hidden flag that clap uses to allow users to disable
+    /// the default `--skip-hidden` behavior.
+    #[arg(
+        long = "no-skip-hidden",
+        action = ArgAction::SetTrue,
+        overrides_with("skip_hidden"),
+        hide = true
+    )]
+    pub no_skip_hidden: bool,
 
     /// Extract raw content without additional metadata
     ///

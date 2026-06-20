@@ -12,6 +12,11 @@ use std::{env, fs};
 ///
 /// This orchestrates the entire flow: configuration, traversal, clipboard, stats, and editor.
 pub fn execute(mut args: RunArgs) -> anyhow::Result<()> {
+    // Resolve negatable flags before processing.
+    // If the user explicitly passes `--no-skip-hidden`, `no_skip_hidden` becomes true,
+    // which forces our final `skip_hidden` evaluation to false.
+    args.skip_hidden = args.skip_hidden && !args.no_skip_hidden;
+
     // Display welcome banner (respects fast mode)
     if !args.fast_mode {
         //note: Always fast mode
@@ -309,6 +314,7 @@ mod run_tests {
             delete: false,
             verbose: false,
             skip_hidden: true,
+            no_skip_hidden: false,
             raw: true,
             fast_mode: false,
             tree: false,
@@ -359,6 +365,7 @@ mod run_tests {
             delete: false,
             verbose: false,
             skip_hidden: true,
+            no_skip_hidden: false,
             raw: true,
             fast_mode: false,
             tree: false,
@@ -393,6 +400,7 @@ mod run_tests {
             delete: false,
             verbose: false,
             skip_hidden: true,
+            no_skip_hidden: false,
             raw: true,
             fast_mode: false,
             tree: false,
