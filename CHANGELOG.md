@@ -3,6 +3,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.6.0](https://github.com/seyallius/treeclip.v2/compare/v1.5.0...v1.6.0) - 2026-06-20
+
+### Added
+
+- add negatable --no-skip-hidden flag
+
+### Fixed
+
+- force fast mode and bypass welcome banner
+
 ## [1.5.0](https://github.com/seyallius/treeclip.v2/compare/v1.4.4...v1.5.0) - 2026-06-20
 
 ### Added
