@@ -34,6 +34,7 @@ This section addresses common issues and errors you might encounter while using 
 
 - Verify that the path specified as an argument to `treeclip run` is correct and exists.
 - Ensure you are running the command from the correct directory if using relative paths.
+- If using glob patterns, ensure the base path of the pattern exists (e.g., the directory part of `src/**/*.rs`).
 
 ### 4. "No files found" Error
 
@@ -45,16 +46,47 @@ This section addresses common issues and errors you might encounter while using 
 - Review your `.treeclipignore` file or `-e` exclusion patterns. They might be too broad and excluding all intended
   files.
 
-### 5. Shell Glob Pattern Issues
+### 5. "Glob pattern matched no paths" Error
+
+**Problem:** A glob pattern used as an input path matched no files or directories.
+
+**Solution:**
+
+- Check that the pattern is correct and the files/directories it targets actually exist.
+- Ensure the pattern is quoted to prevent shell expansion: `treeclip run 'src/**/*.rs'` instead of
+  `treeclip run src/**/*.rs`.
+- Verify the base directory in your pattern exists. For example, `nonexistent_dir/*.rs` will fail if
+  `nonexistent_dir` doesn't exist.
+- Use `--verbose` to see more details about what TreeClip is processing.
+
+```bash
+# ✅ Correct — quoted pattern
+treeclip run 'src/**/*.rs' --verbose
+
+# ❌ Wrong — shell may expand or fail silently
+treeclip run src/**/*.rs
+```
+
+### 6. "Invalid glob pattern" Error
+
+**Problem:** A glob pattern has syntax errors (e.g., unmatched brackets or braces).
+
+**Solution:**
+
+- Check for balanced brackets: `[abc]` is valid, `[abc` is not.
+- Check for balanced braces: `{a,b}` is valid, `{a,b` is not.
+- Escape literal special characters if needed, or quote the entire pattern.
+
+### 7. Shell Glob Pattern Issues (Exclusion)
 
 **Problem:** Using wildcard patterns like `*.txt` with `-e` doesn't work as expected.
 
 **Solution:**
 
 - Always quote glob patterns to prevent shell expansion: `treeclip run -e '*.txt'` or `treeclip run -e "*.log"`. See
-  the [Usage](./usage.md#shell-glob-patterns) page for details.
+  the [Usage](./usage.md#shell-glob-patterns-exclusion) page for details.
 
-### 6. Editor Does Not Open or Fails
+### 8. Editor Does Not Open or Fails
 
 **Problem:** The `--editor` flag doesn't open the output file.
 
@@ -65,7 +97,7 @@ This section addresses common issues and errors you might encounter while using 
   `export EDITOR=vim`).
 - Check the output of the command for any specific error messages related to opening the editor.
 
-### 7. Init Command Fails
+### 9. Init Command Fails
 
 **Problem:** The `treeclip init` command fails.
 
@@ -80,5 +112,5 @@ This section addresses common issues and errors you might encounter while using 
 ## Getting More Help
 
 - Run `treeclip --help` or `treeclip run --help` or `treeclip init --help` for detailed command-line option information.
-- Check the [Usage](./usage.md) page for comprehensive command details.
+- Check the [Usage](./usage.md) page for comprehensive command details, including glob pattern support.
 - If you suspect a bug, please report it on the [GitHub repository](https://github.com/seyallius/treeclip.v2/issues).

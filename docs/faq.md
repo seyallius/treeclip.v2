@@ -37,10 +37,27 @@ generates
 a default `.treeclipignore` file with common patterns and can also import patterns from existing `.gitignore` and other
 standard ignore files in the target directory.
 
+### Q: Can I use glob patterns for input paths?
+
+**A:** Yes! TreeClip supports git-style glob patterns for input paths. You can use patterns like `src/**/*.rs`,
+`object/*.go`, `*.md`, or `{src,lib}/*.rs` to selectively include files. Always quote patterns to prevent shell
+expansion: `treeclip run 'src/**/*.rs'`. See the [Usage](./usage.md#glob-patterns) page for details.
+
+### Q: What happens if my glob pattern matches nothing?
+
+**A:** TreeClip will report an error instead of silently producing empty output. This helps catch typos and overly
+specific patterns early. For example, `treeclip run 'nonexistent/**/*.rs'` will produce an error like
+`"Glob pattern matched no paths: 'nonexistent/**/*.rs'"`.
+
 ### Q: Can I use TreeClip with any AI assistant?
 
 **A:** Yes, TreeClip outputs a standard text format that can be pasted into any text-based interface, including popular
 AI assistants like ChatGPT, Claude, Gemini, and others.
+
+### Q: Can I mix glob patterns and literal paths?
+
+**A:** Absolutely. You can combine both in a single command: `treeclip run ./src 'tests/**/*.rs' README.md`. TreeClip
+will expand the glob patterns and use literal paths as-is, then deduplicate the results.
 
 ## Technical
 
@@ -91,6 +108,7 @@ I'm still learning Rust, so if you spot any anti-patterns or improvements, I'm a
 - [ ] Streaming for huge projects
 - [ ] Plugin system for custom processors
 - [x] Multiple inputs
+- [x] Glob pattern support for input paths
 - [ ] Commands and Options completion
 - [ ] Add don't overwrite output file option
 - [x] Add tree option showing and writing a tree structure of traversed file(s)

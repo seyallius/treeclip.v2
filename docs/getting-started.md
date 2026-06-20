@@ -46,6 +46,24 @@ This command does the following:
 
 After running this command, you can paste the entire codebase directly into your AI chat interface.
 
+## Using Glob Patterns
+
+Instead of bundling entire directories, you can use glob patterns to select specific files:
+
+```bash
+# Bundle only Rust source files
+treeclip run 'src/**/*.rs' --clipboard
+
+# Bundle all Go files in the object directory
+treeclip run 'object/*.go'
+
+# Bundle markdown files and a specific directory
+treeclip run '*.md' ./docs -o readme-bundle.txt
+```
+
+> **Tip:** Always quote glob patterns (single quotes on Unix, double quotes on PowerShell) to prevent your shell
+> from expanding them before TreeClip processes them.
+
 ## Understanding the Output Format
 
 TreeClip generates a simple, structured format:
@@ -68,5 +86,5 @@ for both humans and AI to identify where each piece of code comes from.
 ## Next Steps
 
 - Learn how to [install](./installation.md) TreeClip.
-- Explore the full range of [commands and options](./usage.md).
+- Explore the full range of [commands and options](./usage.md), including glob pattern support.
 - Check out [examples](./examples/) for specific use cases.

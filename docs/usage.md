@@ -13,11 +13,12 @@ treeclip run [OPTIONS] [INPUT_PATHS]...
 
 ### Positional Arguments
 
-| Argument      | Description                          | Default                 |
-|---------------|--------------------------------------|-------------------------|
-| `INPUT_PATHS` | One or more directories to traverse. | `.` (current directory) |
+| Argument      | Description                                                                                                    | Default                 |
+|---------------|----------------------------------------------------------------------------------------------------------------|-------------------------|
+| `INPUT_PATHS` | One or more directories or glob patterns to traverse. Supports both literal paths and git-style glob patterns. | `.` (current directory) |
 
 > **Note:** You can specify multiple input paths to combine files from different directories into a single output file.
+> Input paths support glob patterns — see [Glob Patterns](#glob-patterns) below for details.
 
 #### Examples of Multiple Input Paths
 
@@ -27,6 +28,12 @@ treeclip run . src -o output.txt
 
 # Bundle multiple specific directories
 treeclip run src/ tests/ examples/ -o combined.txt
+
+# Use glob patterns to select specific files
+treeclip run 'src/**/*.rs' 'tests/**/*.rs' -o rust-code.txt
+
+# Mix literal paths and glob patterns
+treeclip run ./src '*.md' 'tests/**/*.rs' -o mixed.txt
 ```
 
 ### Optional Arguments
@@ -46,6 +53,76 @@ treeclip run src/ tests/ examples/ -o combined.txt
 | `--fast-mode`          | `-f`  | Execute quickly without animations or welcome banners. Useful for scripts or CI/CD.                                                                                                       | Off                   |
 | `--help`               | `-h`  | Show help information.                                                                                                                                                                    | -                     |
 | `--version`            | `-V`  | Show the version number.                                                                                                                                                                  | -                     |
+
+## Glob Patterns
+
+TreeClip supports git-style glob patterns for input paths, allowing you to selectively include files and directories
+without manually listing each one. Glob patterns are expanded before traversal begins, and unmatched patterns produce an
+error to prevent silently generating empty output.
+
+### Supported Patterns
+
+| Pattern  | Description                                       | Example                         |
+|----------|---------------------------------------------------|---------------------------------|
+| `*`      | Matches anything except path separators           | `*.rs` matches `main.rs`        |
+| `**`     | Matches zero or more directories (recursive)      | `src/**/*.rs` matches all `.rs` |
+| `?`      | Matches any single character except separators    | `file?.txt` matches `file1.txt` |
+| `[abc]`  | Matches one character from the set                | `[abc].rs` matches `a.rs`       |
+| `{a,b}`  | Matches one of the alternatives (brace expansion) | `{src,lib}/*.rs`                |
+| `.[!.]*` | Matches dot-files (excluding `.` and `..`)        | `.[!.]*` matches `.env`         |
+
+### Usage Examples
+
+```bash
+# All files in the object directory
+treeclip run 'object/*'
+
+# All Go files directly inside object/
+treeclip run 'object/*.go'
+
+# All Rust files recursively under src/
+treeclip run 'src/**/*.rs'
+
+# All test files in the entire project
+treeclip run '**/*.test.js'
+
+# Files in either src/ or lib/ directories
+treeclip run '{src,lib}/*.rs'
+
+# All markdown files in the root
+treeclip run '*.md'
+
+# Mix glob patterns with literal paths
+treeclip run ./src 'tests/**/*.rs' README.md -o bundle.txt
+```
+
+### Important: Quote Your Patterns
+
+Always quote glob patterns to prevent your shell from expanding them before TreeClip sees them:
+
+```bash
+# ✅ Correct — TreeClip handles the glob expansion
+treeclip run 'src/**/*.rs'
+
+# ❌ Wrong — Shell expands the glob, may miss recursive matches
+treeclip run src/**/*.rs
+```
+
+On Windows (PowerShell), use double quotes:
+
+```powershell
+treeclip run "src/**/*.rs"
+```
+
+### Error Handling
+
+If a glob pattern matches no paths, TreeClip reports an error instead of silently producing empty output:
+
+```
+Error: Glob pattern matched no paths: 'nonexistent/**/*.rs'
+```
+
+This helps catch typos and overly specific patterns early.
 
 ## `init`
 
@@ -96,6 +173,7 @@ Here are some common and useful commands:
 | **Quick Clipboard Copy**               | `treeclip run --clipboard`                                                                                            | Scans current directory, creates temp file, copies content to clipboard.                                    |
 | **Specific Directory + Custom Output** | `treeclip run ./src -o ./docs/dump.txt`                                                                               | Scans only `./src`, saves output to `./docs/dump.txt`.                                                      |
 | **Exclude Build Artifacts**            | `treeclip run -e node_modules -e target -e .git`                                                                      | Scans current directory but ignores common build artifacts and version control directories.                 |
+| **Glob Pattern Input**                 | `treeclip run 'src/**/*.rs' 'tests/**/*.rs' --clipboard`                                                              | Bundles only Rust source and test files using glob patterns.                                                |
 | **Review Before Sharing**              | `treeclip run --editor --delete`                                                                                      | Creates temp file, opens it in editor, deletes it after the editor closes.                                  |
 | **The Full Experience™**               | `treeclip run ./my-project -o ./export/snapshot.txt -e node_modules -e "*.lock" --clipboard --stats --verbose --tree` | Combines many options: custom paths, exclusions, clipboard copy, stats, verbose output, and tree structure. |
 | **Fast Mode (No Animations)**          | `treeclip run --fast-mode --clipboard`                                                                                | Executes quickly without UI elements, ideal for scripts.                                                    |
@@ -132,10 +210,10 @@ Thumbs.db
 
 With this file present, TreeClip will automatically respect these rules without needing `-e` flags.
 
-## Shell Glob Patterns
+## Shell Glob Patterns (Exclusion)
 
-> **Warning:** Be careful with shell glob patterns (like `*` or `?`). Your shell might expand them before passing them
-> to TreeClip.
+> **Warning:** Be careful with shell glob patterns (like `*` or `?`) when used with the `-e` exclude flag. Your shell might
+> expand them before passing them to TreeClip.
 
 For example, running `treeclip run -e *.txt` in a directory containing `file1.txt` and `file2.txt` will actually execute
 as `treeclip run -e file1.txt -e file2.txt`, which is likely not the intended exclusion pattern.
@@ -146,3 +224,6 @@ as `treeclip run -e file1.txt -e file2.txt`, which is likely not the intended ex
 treeclip run -e '*.txt' # Correct
 treeclip run -e "*.log" # Also correct
 ```
+
+> **Note:** This warning applies to the `-e` (exclude) flag. For input path glob patterns, quoting is always recommended
+> to let TreeClip handle the expansion (especially for `**` recursive patterns that shells may not support).
