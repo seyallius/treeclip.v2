@@ -14,7 +14,9 @@ use std::{env, fs};
 pub fn execute(mut args: RunArgs) -> anyhow::Result<()> {
     // Display welcome banner (respects fast mode)
     if !args.fast_mode {
-        banner::print_welcome();
+        //note: Always fast mode
+        // banner::print_welcome();
+        args.fast_mode = true
     }
 
     // Normalize paths to absolute paths
