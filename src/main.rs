@@ -1,55 +1,40 @@
 //! main - Entry point for the TreeClip CLI application.
 
-use crate::{
-    commands::{args, run},
-    core::tui,
-    core::ui::messages::Messages,
-};
+use crate::commands::run;
 use clap::Parser;
 use cli::*;
-use std::{env, path::PathBuf};
+use std::env;
 
 mod cli;
 mod commands;
 mod core;
+mod tui;
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
+        // Headless CLI flow — unchanged from before.
         Some(Commands::Run(run_args)) => run::execute(run_args)?,
         Some(Commands::Init(args)) => commands::init_handler::handle(args)?,
-        None => {
-            // 🌳 No subcommand? Launch the Interactive TUI!
-            let root = env::current_dir()?;
-            match tui::run_tui(&root)? {
-                Some(tui_result) => {
-                    if tui_result.input_paths.is_empty() {
-                        println!("{}", Messages::tui_cancelled());
-                        return Ok(());
-                    }
 
-                    // Construct RunArgs from TUI selections
-                    let run_args = args::RunArgs {
-                        input_paths: tui_result.input_paths,
-                        output_path: Some(PathBuf::from("./treeclip_temp.txt")),
-                        root: Some(root),
-                        exclude: tui_result.exclude_patterns,
-                        clipboard: true, // Default to true for TUI users
-                        stats: true,     // Show them the stats!
-                        editor: false,
-                        delete: false,
-                        verbose: false,
-                        skip_hidden: true,
-                        no_skip_hidden: false,
-                        raw: true,
-                        fast_mode: false, // Let them see the cute animations
-                        tree: true,       // Include tree structure
-                    };
-                    run::execute(run_args)?;
+        // Bare `treeclip` — interactive TUI flow.
+        None => {
+            // The TUI is rooted at the current directory, mirroring the
+            // default of `treeclip run .` so the user's mental model is
+            // "I'm standing in my project, let me bundle it".
+            let root = env::current_dir()?;
+
+            match tui::run_tui(&root)? {
+                Some(args) => {
+                    // User confirmed a run. Hand the constructed `RunArgs`
+                    // to the existing pipeline so all the existing walker /
+                    // exclude / clipboard / editor / stats code runs
+                    // unchanged.
+                    run::execute(args)?;
                 }
                 None => {
-                    println!("{}", Messages::tui_cancelled());
+                    // User canceled (`q` / Esc / Ctrl-C). Nothing to do.
                 }
             }
         }
@@ -75,5 +60,11 @@ mod main_tests {
 
         assert!(result.is_ok());
         Ok(())
+    }
+
+    #[test]
+    fn test_bare_treeclip_yields_none() {
+        let cli = Cli::parse_from(&["treeclip"]);
+        assert!(cli.command.is_none());
     }
 }

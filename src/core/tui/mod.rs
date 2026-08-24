@@ -3,5 +3,3 @@
 //! to visually select files before bundling them with TreeClip.
 
 pub mod picker;
-
-pub use picker::run_tui;

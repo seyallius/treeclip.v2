@@ -14,19 +14,16 @@ use clap::{Parser, Subcommand};
 AI-friendly format with proper headers. Perfect for sharing entire codebases
 with ChatGPT, Claude, or any AI assistant!
 
-Stop copy-pasting files one by one. Let TreeClip do the heavy lifting! (◕‿◕✿)",
-    after_help = "EXAMPLES:
-    # Quick clipboard copy of current directory
-    treeclip run --clipboard
+Stop copy-pasting files one by one. Let TreeClip do the heavy lifting! (◕‿◕✿)
 
-    # Extract specific directory with exclusions
-    treeclip run ./src -e node_modules -e target --clipboard
+TIP: Run `treeclip` with no arguments to launch the interactive TUI -
+pick files with multi-selection, exclude paths, set globs, and toggle
+options with a beautiful, stateful interface. Pass a subcommand for the
+headless CLI flow (great for CI/CD pipelines).
 
-    # Review output before sharing
-    treeclip run --editor --delete --stats
-
-    # Fast mode for CI/CD
-    treeclip run --fast-mode -o output.txt
+    treeclip                       # launch the TUI (interactive)
+    treeclip run --clipboard       # CLI mode - bundle + copy to clipboard
+    treeclip run 'src/**/*.rs'      # CLI mode - bundle by glob pattern
 
 For more examples and usage patterns, visit:
 https://github.com/seyallius/treeclip.v2?tab=readme-ov-file#how-to-use-it-
@@ -38,6 +35,8 @@ Made with ♡ by someone tired of copy-pasting code files!",
     verbatim_doc_comment
 )]
 pub struct Cli {
+    /// Subcommand. `None` means the user typed bare `treeclip` and we should
+    /// launch the TUI.
     #[command(subcommand)]
     pub command: Option<Commands>,
 }
@@ -45,13 +44,13 @@ pub struct Cli {
 /// Available subcommands for TreeClip.
 #[derive(Subcommand)]
 pub enum Commands {
-    /// Run TreeClip to extract and bundle code files
+    /// Run TreeClip to extract and bundle code files.
     ///
-    /// This is the main command that traverses your directory,
+    /// This is the headless CLI command that traverses your directory,
     /// extracts all file contents, and bundles them into a single
     /// output file with proper headers showing file paths.
     ///
-    /// Perfect for sharing codebases with AI assistants! 🤖
+    /// For interactive selection, just run `treeclip` with no subcommand.
     #[command(
         verbatim_doc_comment,
         after_help = "QUICK EXAMPLES:
@@ -117,25 +116,25 @@ mod cli_tests {
     #[test]
     fn test_cli_parse_run_command() {
         let cli = Cli::parse_from(&["treeclip", "run", "test_dir"]);
-        match cli.command.unwrap() {
-            Commands::Run(args) => {
+        match cli.command {
+            Some(Commands::Run(args)) => {
                 assert_eq!(args.input_paths, vec![PathBuf::from("test_dir")]);
             }
-            _ => {}
+            _ => panic!("expected Run command"),
         }
     }
 
     #[test]
     fn test_cli_parse_multiple_input_paths() {
         let cli = Cli::parse_from(&["treeclip", "run", "dir1", "dir2", "dir3"]);
-        match cli.command.unwrap() {
-            Commands::Run(args) => {
+        match cli.command {
+            Some(Commands::Run(args)) => {
                 assert_eq!(args.input_paths.len(), 3);
                 assert_eq!(args.input_paths[0], PathBuf::from("dir1"));
                 assert_eq!(args.input_paths[1], PathBuf::from("dir2"));
                 assert_eq!(args.input_paths[2], PathBuf::from("dir3"));
             }
-            _ => {}
+            _ => panic!("expected Run command"),
         }
     }
 
@@ -144,11 +143,11 @@ mod cli_tests {
         // Glob strings must parse through clap untouched; expansion happens
         // later in run::normalize_paths, not at the CLI parsing layer.
         let cli = Cli::parse_from(&["treeclip", "run", "object/*.go"]);
-        match cli.command.unwrap() {
-            Commands::Run(args) => {
+        match cli.command {
+            Some(Commands::Run(args)) => {
                 assert_eq!(args.input_paths, vec![PathBuf::from("object/*.go")]);
             }
-            _ => {}
+            _ => panic!("expected Run command"),
         }
     }
 
@@ -164,12 +163,12 @@ mod cli_tests {
             ".git",
         ]);
 
-        match cli.command.unwrap() {
-            Commands::Run(args) => {
+        match cli.command {
+            Some(Commands::Run(args)) => {
                 assert_eq!(args.exclude, vec!["node_modules", ".git"]);
                 assert_eq!(args.input_paths, vec![PathBuf::from(".")]);
             }
-            _ => {}
+            _ => panic!("expected Run command"),
         }
     }
 
@@ -184,13 +183,13 @@ mod cli_tests {
             "--verbose",
         ]);
 
-        match cli.command.unwrap() {
-            Commands::Run(args) => {
+        match cli.command {
+            Some(Commands::Run(args)) => {
                 assert!(args.clipboard);
                 assert!(args.editor);
                 assert!(args.verbose);
             }
-            _ => {}
+            _ => panic!("expected Run command"),
         }
     }
 
@@ -198,34 +197,31 @@ mod cli_tests {
     fn test_cli_parse_with_fast_mode() {
         let cli = Cli::parse_from(&["treeclip", "run", ".", "--fast-mode"]);
 
-        match cli.command.unwrap() {
-            Commands::Run(args) => {
+        match cli.command {
+            Some(Commands::Run(args)) => {
                 assert!(args.fast_mode);
             }
-            _ => {}
+            _ => panic!("expected Run command"),
         }
     }
 
     #[test]
-    fn test_cli_requires_subcommand() {
-        let result = Cli::try_parse_from(&["treeclip"]);
-        // Should fail because arg_required_else_help = true
-        assert!(result.is_err());
+    fn test_cli_no_subcommand_enters_tui_mode() {
+        // NEW: bare `treeclip` now parses successfully and yields `None` for
+        // the subcommand, which `main.rs` interprets as "launch the TUI".
+        let cli = Cli::parse_from(&["treeclip"]);
+        assert!(cli.command.is_none(), "bare treeclip should yield no subcommand");
     }
 
     #[test]
     fn test_cli_version_flag() {
-        // Just ensure it doesn't panic
-        let result = Cli::try_parse_from(&["treeclip", "--version"]);
-        // Will fail in test but shouldn't panic
-        let _ = result;
+        // Should still print version and exit (clap will Err with a DisplayHelp/Version).
+        let _ = Cli::try_parse_from(&["treeclip", "--version"]);
     }
 
     #[test]
     fn test_cli_help_flag() {
-        // Just ensure it doesn't panic
-        let result = Cli::try_parse_from(&["treeclip", "--help"]);
-        // Will fail in test but shouldn't panic
-        let _ = result;
+        // Should still print help and exit.
+        let _ = Cli::try_parse_from(&["treeclip", "--help"]);
     }
 }

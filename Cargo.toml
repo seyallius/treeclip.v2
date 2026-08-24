@@ -40,11 +40,11 @@ tempfile = "3.23.0"     # Temporary file handling
 # UI and formatting
 colored = "3.0.0"        # Terminal colors
 unicode-width = "0.2.2"  # Unicode-aware width calculations
-crossterm = "0.29.0"
-ratatui = "0.30.2"    # Parallel processing
+ratatui   = { version = "0.30.2", features = ["crossterm"] }    # the widget toolkit
+crossterm = "0.29.0"                                            # terminal I/O backend
 
 # Utilities
-rand = "0.9.2"     # Random number generation for UI
+rand = "0.10.2"     # Random number generation for UI
 
 # Parallel processing
 rayon = "1.10"

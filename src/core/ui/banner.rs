@@ -2,7 +2,7 @@
 
 use crate::core::ui::table::{Align, BorderStyle, FormattedBox};
 use colored::Colorize;
-use rand::Rng;
+use rand::RngExt;
 use std::sync::LazyLock;
 
 // -------------------------------------------- Constants --------------------------------------------

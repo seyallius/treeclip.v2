@@ -1,13 +1,18 @@
 //! run - Main execution logic for the run command, orchestrating all operations.
 
 use super::args::RunArgs;
-use crate::core::errors::FileSystemError;
-use crate::core::ui::messages::Messages;
-use crate::core::ui::{animations, banner, formatter, messages};
-use crate::core::{clipboard, editor, glob, traversal::walker};
+use crate::core::{
+    clipboard, editor,
+    errors::FileSystemError,
+    glob,
+    traversal::walker,
+    ui::{animations, banner, formatter, messages},
+};
 use anyhow::Context;
-use std::path::{Path, PathBuf};
-use std::{env, fs};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+};
 
 /// Executes the main treeclip run command with the provided arguments.
 ///
