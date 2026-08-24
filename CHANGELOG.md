@@ -3,6 +3,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.6.1](https://github.com/seyallius/treeclip.v2/compare/v1.6.0...v1.6.1) - 2026-08-24
+
+### Other
+
+- *(readme)* add download badges and fix formatting
+
 ## [1.6.0](https://github.com/seyallius/treeclip.v2/compare/v1.5.0...v1.6.0) - 2026-06-20
 
 ### Added
