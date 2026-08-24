@@ -182,6 +182,7 @@ mod exclude_tests {
             raw: true,
             fast_mode: true,
             tree: false,
+            interactive: false,
         }
     }
 
@@ -291,6 +292,7 @@ mod exclude_tests {
             raw: false,
             fast_mode: false,
             tree: false,
+            interactive: false,
         };
         let matcher = ExcludeMatcher::new(root, &run_args)?;
 

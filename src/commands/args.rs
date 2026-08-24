@@ -208,6 +208,9 @@ pub struct RunArgs {
     /// Tree structure: show and write the tree structure of traversed dir(s)/file(s).
     #[arg(short, long, default_value_t = false, verbatim_doc_comment)]
     pub tree: bool,
+
+    #[arg(long, help = "Launch interactive TUI for file selection")]
+    pub interactive: bool,
 }
 
 /// Arguments for the init command.

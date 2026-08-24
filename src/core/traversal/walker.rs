@@ -10,7 +10,7 @@ use colored::Colorize;
 use rayon::prelude::*;
 use std::fs;
 use std::fs::File;
-use std::io::{stdout, Write};
+use std::io::{Write, stdout};
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
@@ -320,6 +320,7 @@ mod walker_tests {
             raw: true,
             fast_mode: true,
             tree: false,
+            interactive: false,
         };
 
         walker.traverse(&args)?;
@@ -365,6 +366,7 @@ mod walker_tests {
             raw: true,
             fast_mode: true,
             tree: false,
+            interactive: false,
         };
 
         walker.traverse(&args)?;
@@ -410,6 +412,7 @@ mod walker_tests {
             raw: true,
             fast_mode: true,
             tree: false,
+            interactive: false,
         };
 
         let result = walker.process_dir(&args);
@@ -445,6 +448,7 @@ mod walker_tests {
             raw: true,
             fast_mode: true,
             tree: false,
+            interactive: false,
         };
 
         let result = walker.traverse(&args);
@@ -495,6 +499,7 @@ mod walker_tests {
             raw: true,
             fast_mode: true,
             tree: false,
+            interactive: false,
         };
 
         let result = walker.traverse(&args);

@@ -7,6 +7,7 @@ use crate::core::{clipboard, editor, glob, traversal::walker};
 use anyhow::Context;
 use std::path::{Path, PathBuf};
 use std::{env, fs};
+use crate::core::ui::messages::Messages;
 
 /// Executes the main treeclip run command with the provided arguments.
 ///
@@ -28,8 +29,17 @@ pub fn execute(mut args: RunArgs) -> anyhow::Result<()> {
     normalize_paths(&mut args)?;
 
     let root = args.root.as_ref().unwrap();
-    let inputs = &args.input_paths;
+    let inputs = &args.input_paths.clone();
     let output = args.output_path.as_ref().unwrap();
+
+    if args.interactive {
+        let selected = crate::core::tui::run_tui(root)?;
+        if selected.is_empty() {
+            println!("{}", Messages::init_cancelled());
+            return Ok(());
+        }
+        args.input_paths = selected;
+    }
 
     // Log configuration
     log_config(&args)?;
@@ -318,6 +328,7 @@ mod run_tests {
             raw: true,
             fast_mode: false,
             tree: false,
+            interactive: false,
         };
 
         normalize_paths(&mut args)?;
@@ -369,6 +380,7 @@ mod run_tests {
             raw: true,
             fast_mode: false,
             tree: false,
+            interactive: false,
         };
 
         let result = normalize_paths(&mut args);
@@ -404,6 +416,7 @@ mod run_tests {
             raw: true,
             fast_mode: false,
             tree: false,
+            interactive: false,
         };
 
         let result = normalize_paths(&mut args);

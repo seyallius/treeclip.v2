@@ -9,3 +9,4 @@ pub mod traversal;
 mod tree;
 pub mod ui;
 pub mod utils;
+pub mod tui;
