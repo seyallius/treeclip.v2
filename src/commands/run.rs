@@ -2,12 +2,12 @@
 
 use super::args::RunArgs;
 use crate::core::errors::FileSystemError;
+use crate::core::ui::messages::Messages;
 use crate::core::ui::{animations, banner, formatter, messages};
 use crate::core::{clipboard, editor, glob, traversal::walker};
 use anyhow::Context;
 use std::path::{Path, PathBuf};
 use std::{env, fs};
-use crate::core::ui::messages::Messages;
 
 /// Executes the main treeclip run command with the provided arguments.
 ///
@@ -31,15 +31,6 @@ pub fn execute(mut args: RunArgs) -> anyhow::Result<()> {
     let root = args.root.as_ref().unwrap();
     let inputs = &args.input_paths.clone();
     let output = args.output_path.as_ref().unwrap();
-
-    if args.interactive {
-        let selected = crate::core::tui::run_tui(root)?;
-        if selected.is_empty() {
-            println!("{}", Messages::init_cancelled());
-            return Ok(());
-        }
-        args.input_paths = selected;
-    }
 
     // Log configuration
     log_config(&args)?;
@@ -328,7 +319,6 @@ mod run_tests {
             raw: true,
             fast_mode: false,
             tree: false,
-            interactive: false,
         };
 
         normalize_paths(&mut args)?;
@@ -380,7 +370,6 @@ mod run_tests {
             raw: true,
             fast_mode: false,
             tree: false,
-            interactive: false,
         };
 
         let result = normalize_paths(&mut args);
@@ -389,7 +378,11 @@ mod run_tests {
 
         result?;
         assert_eq!(args.input_paths.len(), 2);
-        assert!(args.input_paths.iter().all(|p| p.extension().unwrap() == "go"));
+        assert!(
+            args.input_paths
+                .iter()
+                .all(|p| p.extension().unwrap() == "go")
+        );
 
         Ok(())
     }
@@ -416,7 +409,6 @@ mod run_tests {
             raw: true,
             fast_mode: false,
             tree: false,
-            interactive: false,
         };
 
         let result = normalize_paths(&mut args);

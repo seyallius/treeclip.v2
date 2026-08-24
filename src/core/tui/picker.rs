@@ -8,11 +8,12 @@ use crossterm::{
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
+use ratatui::widgets::Wrap;
 use ratatui::{
     Frame, Terminal,
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout},
-    style::{Color, Modifier, Style, Stylize},
+    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
 };
@@ -22,6 +23,19 @@ use std::{
     path::{Path, PathBuf},
     time::Duration,
 };
+
+/// Result returned by the TUI upon successful confirmation.
+pub struct TuiResult {
+    pub input_paths: Vec<PathBuf>,
+    pub exclude_patterns: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+enum InputMode {
+    Normal,
+    GlobInclude,
+    GlobExclude,
+}
 
 /// Represents a node in the file tree (file or directory)
 #[derive(Debug, Clone)]
@@ -37,14 +51,18 @@ struct FileNode {
 struct App {
     root: PathBuf,
     nodes: Vec<FileNode>,
-    flat_nodes: Vec<PathBuf>,         // Flattened view for navigation
-    expanded_dirs: HashSet<PathBuf>,  // Tracks which directories are open
-    selected_items: HashSet<PathBuf>, // Multi-selection state
-    list_state: ListState,            // Ratatui list state for scrolling/cursor
+    flat_nodes: Vec<PathBuf>,
+    expanded_dirs: HashSet<PathBuf>,
+    selected_items: HashSet<PathBuf>,
+    excluded_items: HashSet<PathBuf>,
+    list_state: ListState,
     status_message: String,
+    input_mode: InputMode,
+    input_buffer: String,
+    glob_include_patterns: Vec<String>,
+    glob_exclude_patterns: Vec<String>,
 }
 impl App {
-    /// Creates a new App instance by scanning the root directory
     fn new(root: &Path) -> Result<Self> {
         let nodes = build_tree(root, 0)?;
         let mut app = Self {
@@ -53,24 +71,25 @@ impl App {
             flat_nodes: Vec::new(),
             expanded_dirs: HashSet::new(),
             selected_items: HashSet::new(),
+            excluded_items: HashSet::new(),
             list_state: ListState::default(),
             status_message: Messages::starting_adventure(),
+            input_mode: InputMode::Normal,
+            input_buffer: String::new(),
+            glob_include_patterns: Vec::new(),
+            glob_exclude_patterns: Vec::new(),
         };
 
-        // Initialize with root expanded
         app.expanded_dirs.insert(root.to_path_buf());
         app.rebuild_flat_view();
-        app.list_state.select(Some(0));
+        if !app.flat_nodes.is_empty() {
+            app.list_state.select(Some(0));
+        }
 
         Ok(app)
     }
 
-    /// Main event loop.
-    ///
-    /// Note: We constrain B::Error to be Send + Sync so that it can be
-    /// converted into anyhow::Error via the ? operator. CrosstermBackend
-    /// satisfies these bounds, making this safe for our use case.
-    fn run<B>(&mut self, terminal: &mut Terminal<B>) -> Result<()>
+    fn run<B>(&mut self, terminal: &mut Terminal<B>) -> Result<bool>
     where
         B: ratatui::backend::Backend,
         <B as ratatui::backend::Backend>::Error: Send + Sync + 'static,
@@ -81,19 +100,32 @@ impl App {
             if event::poll(Duration::from_millis(50))? {
                 if let Event::Key(key) = event::read()? {
                     if key.kind == KeyEventKind::Press {
-                        match key.code {
-                            KeyCode::Char('q') | KeyCode::Esc => return Ok(()),
-                            KeyCode::Char(' ') => self.toggle_selection(),
-                            KeyCode::Enter => self.toggle_expand(),
-                            KeyCode::Up | KeyCode::Char('k') => self.move_up(),
-                            KeyCode::Down | KeyCode::Char('j') => self.move_down(),
-                            KeyCode::Char('a') => self.select_all_visible(),
-                            KeyCode::Char('c') => {
-                                self.status_message =
-                                    "✨ Selection confirmed! Ready to bundle~".to_string();
-                                return Ok(());
+                        if self.input_mode != InputMode::Normal {
+                            match key.code {
+                                KeyCode::Enter => self.apply_glob_pattern(),
+                                KeyCode::Esc => {
+                                    self.input_buffer.clear();
+                                    self.input_mode = InputMode::Normal;
+                                }
+                                KeyCode::Char(c) => self.input_buffer.push(c),
+                                KeyCode::Backspace => {
+                                    self.input_buffer.pop();
+                                }
+                                _ => {}
                             }
-                            _ => {}
+                        } else {
+                            match key.code {
+                                KeyCode::Char('q') => return Ok(false),
+                                KeyCode::Char('c') => return Ok(true),
+                                KeyCode::Char(' ') => self.toggle_selection(),
+                                KeyCode::Char('e') => self.toggle_exclusion(),
+                                KeyCode::Char('g') => self.input_mode = InputMode::GlobInclude,
+                                KeyCode::Char('x') => self.input_mode = InputMode::GlobExclude,
+                                KeyCode::Enter => self.toggle_expand(),
+                                KeyCode::Up | KeyCode::Char('k') => self.move_up(),
+                                KeyCode::Down | KeyCode::Char('j') => self.move_down(),
+                                _ => {}
+                            }
                         }
                     }
                 }
@@ -101,12 +133,10 @@ impl App {
         }
     }
 
-    /// Rebuilds the flattened navigation list based on expanded directories
     fn rebuild_flat_view(&mut self) {
         self.flat_nodes.clear();
         flatten_nodes(&self.nodes, &self.expanded_dirs, &mut self.flat_nodes);
 
-        // Ensure cursor stays in bounds
         if let Some(selected) = self.list_state.selected() {
             if selected >= self.flat_nodes.len() && !self.flat_nodes.is_empty() {
                 self.list_state.select(Some(self.flat_nodes.len() - 1));
@@ -114,7 +144,6 @@ impl App {
         }
     }
 
-    /// Toggles expansion state of currently focused directory
     fn toggle_expand(&mut self) {
         if let Some(idx) = self.list_state.selected() {
             if idx < self.flat_nodes.len() {
@@ -131,11 +160,14 @@ impl App {
         }
     }
 
-    /// Toggles selection of currently focused item
     fn toggle_selection(&mut self) {
         if let Some(idx) = self.list_state.selected() {
             if idx < self.flat_nodes.len() {
                 let path = self.flat_nodes[idx].clone();
+                if self.excluded_items.contains(&path) {
+                    self.status_message = "⚠️ Cannot select an excluded item!".to_string();
+                    return;
+                }
                 if self.selected_items.contains(&path) {
                     self.selected_items.remove(&path);
                 } else {
@@ -145,12 +177,67 @@ impl App {
         }
     }
 
-    /// Selects all currently visible items
-    fn select_all_visible(&mut self) {
-        for path in &self.flat_nodes {
-            self.selected_items.insert(path.clone());
+    fn toggle_exclusion(&mut self) {
+        if let Some(idx) = self.list_state.selected() {
+            if idx < self.flat_nodes.len() {
+                let path = self.flat_nodes[idx].clone();
+                if self.excluded_items.contains(&path) {
+                    self.excluded_items.remove(&path);
+                    self.status_message = format!("✅ Included: {}", path.display());
+                } else {
+                    self.excluded_items.insert(path.clone());
+                    self.selected_items.remove(&path);
+                    self.status_message = format!("❌ Excluded: {}", path.display());
+                }
+            }
         }
-        self.status_message = "🎯 Selected all visible items!".to_string();
+    }
+
+    fn apply_glob_pattern(&mut self) {
+        let pattern = self.input_buffer.clone();
+        if pattern.is_empty() {
+            self.input_mode = InputMode::Normal;
+            return;
+        }
+
+        let is_exclude = matches!(self.input_mode, InputMode::GlobExclude);
+
+        match crate::core::glob::expand_glob(&pattern) {
+            Ok(paths) => {
+                let mut count = 0;
+                for path in paths {
+                    let abs_path = std::fs::canonicalize(&path).unwrap_or(path);
+                    if is_exclude {
+                        if self.excluded_items.insert(abs_path.clone()) {
+                            self.selected_items.remove(&abs_path);
+                            count += 1;
+                        }
+                    } else {
+                        if !self.excluded_items.contains(&abs_path)
+                            && self.selected_items.insert(abs_path.clone())
+                        {
+                            count += 1;
+                        }
+                    }
+                }
+                self.status_message = format!(
+                    "✨ {} {} items via glob: {}",
+                    if is_exclude { "Excluded" } else { "Selected" },
+                    count,
+                    pattern
+                );
+                if is_exclude {
+                    self.glob_exclude_patterns.push(pattern);
+                } else {
+                    self.glob_include_patterns.push(pattern);
+                }
+            }
+            Err(e) => {
+                self.status_message = format!("❌ Glob error: {}", e);
+            }
+        }
+        self.input_buffer.clear();
+        self.input_mode = InputMode::Normal;
     }
 
     fn move_up(&mut self) {
@@ -181,11 +268,19 @@ impl App {
         self.list_state.select(Some(i));
     }
 
-    /// Returns all selected paths sorted alphabetically
-    fn get_selected_paths(&self) -> Vec<PathBuf> {
-        let mut paths: Vec<PathBuf> = self.selected_items.iter().cloned().collect();
-        paths.sort();
-        paths
+    fn get_preview(&self) -> String {
+        if let Some(idx) = self.list_state.selected() {
+            if let Some(path) = self.flat_nodes.get(idx) {
+                if path.is_file() {
+                    if let Ok(content) = std::fs::read_to_string(path) {
+                        return content.lines().take(20).collect::<Vec<_>>().join("\n");
+                    }
+                } else if path.is_dir() {
+                    return format!("📂 Directory: {}", path.display());
+                }
+            }
+        }
+        "No preview available".to_string()
     }
 
     /// Renders the complete UI frame
@@ -193,43 +288,81 @@ impl App {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Min(0),    // Main content
-                Constraint::Length(3), // Status bar
+                Constraint::Length(3), // Header
+                Constraint::Min(0),    // Main
+                Constraint::Length(3), // Footer
             ])
             .split(f.area());
 
-        // Main content area split into file list and info pane
+        // Header
+        let header = Paragraph::new(Line::from(vec![
+            Span::styled(
+                " 🌳 TreeClip ",
+                Style::default()
+                    .fg(Color::Magenta)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw("| "),
+            Span::styled(
+                self.root.display().to_string(),
+                Style::default().fg(Color::Cyan),
+            ),
+        ]))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::DarkGray)),
+        );
+        f.render_widget(header, chunks[0]);
+
+        // Main split
         let main_chunks = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
-            .split(chunks[0]);
+            .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
+            .split(chunks[1]);
 
-        // Render file list
+        // File List
         let items: Vec<ListItem> = self
             .flat_nodes
             .iter()
             .map(|path| {
                 let is_selected = self.selected_items.contains(path);
+                let is_excluded = self.excluded_items.contains(path);
                 let is_expanded = self.expanded_dirs.contains(path);
 
-                // Calculate indentation based on depth relative to root
                 let depth = path
                     .strip_prefix(&self.root)
                     .map(|p| p.components().count())
                     .unwrap_or(0);
                 let indent = "  ".repeat(depth);
 
-                let icon = if path.is_dir() {
-                    if is_expanded { "📂 " } else { "📁 " }
+                let (icon, check) = if is_excluded {
+                    ("🚫 ", "   ")
+                } else if is_selected {
+                    if path.is_dir() {
+                        ("📂 ", "✅ ")
+                    } else {
+                        ("📄 ", "✅ ")
+                    }
                 } else {
-                    "📄 "
+                    if path.is_dir() {
+                        if is_expanded {
+                            ("📂 ", "   ")
+                        } else {
+                            ("📁 ", "   ")
+                        }
+                    } else {
+                        ("📄 ", "   ")
+                    }
                 };
-
-                let check = if is_selected { "✅ " } else { "   " };
 
                 let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("???");
 
-                let style = if is_selected {
+                let style = if is_excluded {
+                    Style::default()
+                        .fg(Color::DarkGray)
+                        .add_modifier(Modifier::CROSSED_OUT)
+                } else if is_selected {
                     Style::default()
                         .fg(Color::Green)
                         .add_modifier(Modifier::BOLD)
@@ -248,7 +381,7 @@ impl App {
             .block(
                 Block::default()
                     .borders(Borders::ALL)
-                    .title(" 🌳 TreeClip File Picker ")
+                    .title(" 🗂️ Files ")
                     .border_style(Style::default().fg(Color::Cyan)),
             )
             .highlight_style(
@@ -260,8 +393,30 @@ impl App {
 
         f.render_stateful_widget(list, main_chunks[0], &mut self.list_state);
 
-        // Info pane showing selection summary
+        // Right pane split
+        let right_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Percentage(60), // Preview
+                Constraint::Percentage(40), // Summary
+            ])
+            .split(main_chunks[1]);
+
+        // Preview
+        let preview_text = self.get_preview();
+        let preview = Paragraph::new(preview_text)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" 👁️ Preview ")
+                    .border_style(Style::default().fg(Color::Yellow)),
+            )
+            .wrap(Wrap { trim: true });
+        f.render_widget(preview, right_chunks[0]);
+
+        // Summary
         let selected_count = self.selected_items.len();
+        let excluded_count = self.excluded_items.len();
         let total_size = self
             .selected_items
             .iter()
@@ -269,42 +424,83 @@ impl App {
             .map(|m| m.len())
             .sum::<u64>();
 
-        let info_text = vec![
-            Line::from(Span::styled(
-                "Selection Summary",
-                Style::default().add_modifier(Modifier::BOLD),
-            )),
-            Line::from(""),
-            Line::from(format!("📊 Items: {}", selected_count)),
-            Line::from(format!("💾 Size:  {}", format_bytes(total_size as usize))),
-            Line::from(""),
-            Line::from(Span::styled(
-                "Controls:",
-                Style::default().add_modifier(Modifier::BOLD),
-            )),
-            Line::from("  ↑/↓ Navigate"),
-            Line::from("  Space Toggle select"),
-            Line::from("  Enter Expand/Collapse"),
-            Line::from("  a     Select all visible"),
-            Line::from("  c     Confirm selection"),
-            Line::from("  q/Esc Quit"),
+        let mut summary_lines = vec![
+            Line::from(format!("✅ Selected: {} items", selected_count)),
+            Line::from(format!("❌ Excluded: {} items", excluded_count)),
+            Line::from(format!("💾 Size: {}", format_bytes(total_size as usize))),
         ];
 
-        let info = Paragraph::new(info_text).block(
+        if !self.glob_include_patterns.is_empty() || !self.glob_exclude_patterns.is_empty() {
+            summary_lines.push(Line::from(""));
+            summary_lines.push(Line::from(Span::styled(
+                "Active Globs:",
+                Style::default().add_modifier(Modifier::BOLD),
+            )));
+            for g in &self.glob_include_patterns {
+                summary_lines.push(Line::from(Span::styled(
+                    format!("  + {}", g),
+                    Style::default().fg(Color::Green),
+                )));
+            }
+            for g in &self.glob_exclude_patterns {
+                summary_lines.push(Line::from(Span::styled(
+                    format!("  - {}", g),
+                    Style::default().fg(Color::Red),
+                )));
+            }
+        }
+
+        let summary = Paragraph::new(summary_lines).block(
             Block::default()
                 .borders(Borders::ALL)
-                .title(" ℹ️ Info ")
-                .border_style(Style::default().fg(Color::Yellow)),
+                .title(" 📊 Summary ")
+                .border_style(Style::default().fg(Color::Green)),
         );
-        f.render_widget(info, main_chunks[1]);
+        f.render_widget(summary, right_chunks[1]);
 
-        // Status bar
-        let status = Paragraph::new(Line::from(vec![
-            Span::styled(" 💡 ", Style::default().fg(Color::Magenta)),
-            Span::raw(&self.status_message),
-        ]))
-        .block(Block::default().borders(Borders::ALL));
-        f.render_widget(status, chunks[1]);
+        // Footer
+        let footer = match self.input_mode {
+            InputMode::Normal => Paragraph::new(Line::from(vec![
+                Span::styled(
+                    " [NORMAL] ",
+                    Style::default()
+                        .fg(Color::Black)
+                        .bg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::raw(
+                    " Space: Select | e: Exclude | g: Glob + | x: Glob - | c: Confirm | q: Quit ",
+                ),
+            ])),
+            InputMode::GlobInclude => Paragraph::new(Line::from(vec![
+                Span::styled(
+                    " [GLOB INCLUDE] ",
+                    Style::default()
+                        .fg(Color::Black)
+                        .bg(Color::Green)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::raw(&self.input_buffer),
+                Span::styled("█", Style::default().fg(Color::White)),
+            ])),
+            InputMode::GlobExclude => Paragraph::new(Line::from(vec![
+                Span::styled(
+                    " [GLOB EXCLUDE] ",
+                    Style::default()
+                        .fg(Color::Black)
+                        .bg(Color::Red)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::raw(&self.input_buffer),
+                Span::styled("█", Style::default().fg(Color::White)),
+            ])),
+        }
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::DarkGray)),
+        );
+        f.render_widget(footer, chunks[2]);
     }
 }
 
@@ -315,8 +511,8 @@ impl App {
 ///
 /// # Errors
 /// Returns error if terminal initialization fails or file system access is denied.
-pub fn run_tui(root: &Path) -> Result<Vec<PathBuf>> {
-    // Setup terminal
+/// Entry point for the interactive TUI file picker.
+pub fn run_tui(root: &Path) -> Result<Option<TuiResult>> {
     enable_raw_mode().context("Failed to enable raw mode")?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)
@@ -324,11 +520,9 @@ pub fn run_tui(root: &Path) -> Result<Vec<PathBuf>> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend).context("Failed to initialize terminal")?;
 
-    // Create app state
     let mut app = App::new(root)?;
     let res = app.run(&mut terminal);
 
-    // Restore terminal
     disable_raw_mode().context("Failed to disable raw mode")?;
     execute!(
         terminal.backend_mut(),
@@ -338,9 +532,24 @@ pub fn run_tui(root: &Path) -> Result<Vec<PathBuf>> {
     .context("Failed to leave alternate screen")?;
     terminal.show_cursor().context("Failed to show cursor")?;
 
-    // Handle result
     match res {
-        Ok(_) => Ok(app.get_selected_paths()),
+        Ok(true) => {
+            let mut input_paths: Vec<PathBuf> = app.selected_items.iter().cloned().collect();
+            input_paths.sort();
+
+            let mut exclude_patterns: Vec<String> = app
+                .excluded_items
+                .iter()
+                .map(|p| p.to_string_lossy().to_string())
+                .collect();
+            exclude_patterns.extend(app.glob_exclude_patterns);
+
+            Ok(Some(TuiResult {
+                input_paths,
+                exclude_patterns,
+            }))
+        }
+        Ok(false) => Ok(None),
         Err(e) => Err(e),
     }
 }
@@ -357,7 +566,6 @@ fn build_tree(path: &Path, depth: usize) -> Result<Vec<FileNode>> {
             let entry = entry?;
             let entry_path = entry.path();
 
-            // Skip hidden files by default (can be made configurable)
             if entry.file_name().to_string_lossy().starts_with('.') {
                 continue;
             }
@@ -378,7 +586,6 @@ fn build_tree(path: &Path, depth: usize) -> Result<Vec<FileNode>> {
             });
         }
 
-        // Sort: directories first, then alphabetical
         nodes.sort_by(|a, b| b.is_dir.cmp(&a.is_dir).then(a.name.cmp(&b.name)));
     }
 

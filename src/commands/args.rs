@@ -208,9 +208,6 @@ pub struct RunArgs {
     /// Tree structure: show and write the tree structure of traversed dir(s)/file(s).
     #[arg(short, long, default_value_t = false, verbatim_doc_comment)]
     pub tree: bool,
-
-    #[arg(long, help = "Launch interactive TUI for file selection")]
-    pub interactive: bool,
 }
 
 /// Arguments for the init command.
@@ -298,7 +295,7 @@ mod args_tests {
     #[test]
     fn test_run_args_default_values() {
         let cli = Cli::parse_from(&["treeclip", "run"]);
-        match cli.command {
+        match cli.command.unwrap() {
             Commands::Run(args) => {
                 assert_eq!(args.input_paths, vec![PathBuf::from(".")]);
                 assert!(args.output_path.is_some());
@@ -318,7 +315,7 @@ mod args_tests {
     #[test]
     fn test_multiple_input_paths() {
         let cli = Cli::parse_from(&["treeclip", "run", ".", "src", "some/other/input/path"]);
-        match cli.command {
+        match cli.command.unwrap() {
             Commands::Run(args) => {
                 assert_eq!(args.input_paths.len(), 3);
                 assert_eq!(args.input_paths[0], PathBuf::from("."));
@@ -332,7 +329,7 @@ mod args_tests {
     #[test]
     fn test_fast_mode_flag() {
         let cli = Cli::parse_from(&["treeclip", "run", ".", "--fast-mode"]);
-        match cli.command {
+        match cli.command.unwrap() {
             Commands::Run(args) => {
                 assert!(args.fast_mode);
             }
@@ -353,7 +350,7 @@ mod args_tests {
             "-e",
             "*.log",
         ]);
-        match cli.command {
+        match cli.command.unwrap() {
             Commands::Run(args) => {
                 assert_eq!(args.exclude.len(), 3);
                 assert!(args.exclude.contains(&"node_modules".to_string()));
@@ -374,7 +371,7 @@ mod args_tests {
     #[test]
     fn test_delete_with_editor_works() {
         let cli = Cli::parse_from(&["treeclip", "run", ".", "--editor", "--delete"]);
-        match cli.command {
+        match cli.command.unwrap() {
             Commands::Run(args) => {
                 assert!(args.editor);
                 assert!(args.delete);
@@ -387,7 +384,7 @@ mod args_tests {
     fn test_verbose_and_fast_mode_combination() {
         // These can both be enabled (verbose will be ignored in fast mode)
         let cli = Cli::parse_from(&["treeclip", "run", ".", "--verbose", "--fast-mode"]);
-        match cli.command {
+        match cli.command.unwrap() {
             Commands::Run(args) => {
                 assert!(args.verbose);
                 assert!(args.fast_mode);
@@ -399,7 +396,7 @@ mod args_tests {
     #[test]
     fn test_clipboard_and_stats_combination() {
         let cli = Cli::parse_from(&["treeclip", "run", ".", "--clipboard", "--stats"]);
-        match cli.command {
+        match cli.command.unwrap() {
             Commands::Run(args) => {
                 assert!(args.clipboard);
                 assert!(args.stats);

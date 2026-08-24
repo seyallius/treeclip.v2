@@ -5,7 +5,6 @@ use std::path::Path;
 
 /// Messages provides a centralized location for all user-facing messages.
 pub struct Messages;
-
 impl Messages {
     // -------------------- Startup Messages --------------------
 
@@ -194,6 +193,15 @@ impl Messages {
             "⚠️".bright_yellow(),
             source.bright_blue(),
             error.dimmed()
+        )
+    }
+
+    /// Returns the TUI canceled message.
+    pub fn tui_cancelled() -> String {
+        format!(
+            "{} {}",
+            "🚫".bright_yellow(),
+            "TUI cancelled. No files bundled.".bright_yellow()
         )
     }
 }

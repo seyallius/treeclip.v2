@@ -33,14 +33,13 @@ https://github.com/seyallius/treeclip.v2?tab=readme-ov-file#how-to-use-it-
 
 Made with ♡ by someone tired of copy-pasting code files!",
     next_line_help = true,
-    arg_required_else_help = true,
     disable_help_subcommand = true,
     styles = get_styles(),
     verbatim_doc_comment
 )]
 pub struct Cli {
     #[command(subcommand)]
-    pub command: Commands,
+    pub command: Option<Commands>,
 }
 
 /// Available subcommands for TreeClip.
@@ -118,7 +117,7 @@ mod cli_tests {
     #[test]
     fn test_cli_parse_run_command() {
         let cli = Cli::parse_from(&["treeclip", "run", "test_dir"]);
-        match cli.command {
+        match cli.command.unwrap() {
             Commands::Run(args) => {
                 assert_eq!(args.input_paths, vec![PathBuf::from("test_dir")]);
             }
@@ -129,7 +128,7 @@ mod cli_tests {
     #[test]
     fn test_cli_parse_multiple_input_paths() {
         let cli = Cli::parse_from(&["treeclip", "run", "dir1", "dir2", "dir3"]);
-        match cli.command {
+        match cli.command.unwrap() {
             Commands::Run(args) => {
                 assert_eq!(args.input_paths.len(), 3);
                 assert_eq!(args.input_paths[0], PathBuf::from("dir1"));
@@ -145,7 +144,7 @@ mod cli_tests {
         // Glob strings must parse through clap untouched; expansion happens
         // later in run::normalize_paths, not at the CLI parsing layer.
         let cli = Cli::parse_from(&["treeclip", "run", "object/*.go"]);
-        match cli.command {
+        match cli.command.unwrap() {
             Commands::Run(args) => {
                 assert_eq!(args.input_paths, vec![PathBuf::from("object/*.go")]);
             }
@@ -165,7 +164,7 @@ mod cli_tests {
             ".git",
         ]);
 
-        match cli.command {
+        match cli.command.unwrap() {
             Commands::Run(args) => {
                 assert_eq!(args.exclude, vec!["node_modules", ".git"]);
                 assert_eq!(args.input_paths, vec![PathBuf::from(".")]);
@@ -185,7 +184,7 @@ mod cli_tests {
             "--verbose",
         ]);
 
-        match cli.command {
+        match cli.command.unwrap() {
             Commands::Run(args) => {
                 assert!(args.clipboard);
                 assert!(args.editor);
@@ -199,7 +198,7 @@ mod cli_tests {
     fn test_cli_parse_with_fast_mode() {
         let cli = Cli::parse_from(&["treeclip", "run", ".", "--fast-mode"]);
 
-        match cli.command {
+        match cli.command.unwrap() {
             Commands::Run(args) => {
                 assert!(args.fast_mode);
             }
@@ -230,4 +229,3 @@ mod cli_tests {
         let _ = result;
     }
 }
-
