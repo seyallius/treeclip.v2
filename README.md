@@ -1,5 +1,10 @@
 # TreeClip 🌳✨
 
+![GitHub Release Downloads](https://img.shields.io/github/downloads/seyallius/treeclip.v2/total?label=downloads&logo=github&color=pink&style=for-the-badge)
+![Latest Release Downloads](https://img.shields.io/github/downloads/seyallius/toolkit/latest/total?label=latest%20release&logo=github&style=for-the-badge)
+![Crates.io Downloads](https://img.shields.io/crates/d/treeclip?label=cargo%20installs&logo=rust&color=orange&style=for-the-badge)
+![GitHub Stars](https://img.shields.io/github/stars/seyallius/toolkit?style=social)
+
 *A delightfully fast CLI tool that bundles your code into a single, AI-friendly format*
 
 <p align="center">
